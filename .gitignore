@@ -1,0 +1,19 @@
+node_modules/
+dist/
+out/
+.DS_Store
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+release/

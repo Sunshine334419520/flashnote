@@ -1,0 +1,46 @@
+/**
+ * Single source of truth for all IPC channel names.
+ * Used by main process handlers, preload script, and renderer type definitions.
+ */
+export const IPC_CHANNELS = {
+  // Notes CRUD
+  NOTE_CREATE: 'note:create',
+  NOTE_UPDATE: 'note:update',
+  NOTE_DELETE: 'note:delete',
+  NOTE_GET: 'note:get',
+  NOTE_LIST: 'note:list',
+
+  // AI — Provider management
+  AI_PROVIDER_LIST: 'ai:provider:list',
+  AI_PROVIDER_ADD: 'ai:provider:add',
+  AI_PROVIDER_UPDATE: 'ai:provider:update',
+  AI_PROVIDER_DELETE: 'ai:provider:delete',
+  AI_PROVIDER_SET_ACTIVE: 'ai:provider:set-active',
+  AI_PROVIDER_TEST: 'ai:provider:test',
+
+  // AI — Classification
+  AI_CLASSIFY: 'ai:classify',
+  AI_RECLASSIFY: 'ai:reclassify',
+
+  // Search
+  SEARCH_QUERY: 'search:query',
+
+  // Settings
+  SETTINGS_GET: 'settings:get',
+  SETTINGS_SET: 'settings:set',
+  SETTINGS_GET_ALL: 'settings:getAll',
+
+  // Window management
+  WINDOW_SHOW_QUICK_CAPTURE: 'window:show-quick-capture',
+  WINDOW_HIDE_QUICK_CAPTURE: 'window:hide-quick-capture',
+  WINDOW_SHOW_MAIN: 'window:show-main',
+
+  // Events (main → renderer push)
+  EVENT_NOTE_CREATED: 'event:note-created',
+  EVENT_NOTE_UPDATED: 'event:note-updated',
+  EVENT_NOTE_DELETED: 'event:note-deleted',
+  EVENT_AI_COMPLETE: 'event:ai-classification-complete',
+  EVENT_SETTINGS_CHANGED: 'event:settings-changed'
+} as const
+
+export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
