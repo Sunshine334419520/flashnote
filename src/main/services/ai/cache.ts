@@ -1,12 +1,8 @@
 import Database from 'better-sqlite3'
 import { join } from 'path'
 import { hashContent } from '../../utils/hash'
-import type { ClassificationResult } from '../../../shared/types'
+import type { SmartParseResult } from '../../../shared/types'
 
-/**
- * SQLite-backed classification cache.
- * Keyed by SHA-256(content + hint), shared across all AI providers.
- */
 export class AICache {
   private db: Database.Database
 
@@ -18,11 +14,15 @@ export class AICache {
 
   private initSchema(): void {
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS classification_cache (
+      CREATE TABLE IF NOT EXISTS parse_cache (
         content_hash TEXT PRIMARY KEY,
+        cleaned_content TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'text',
         category TEXT NOT NULL,
         tags TEXT NOT NULL,
         title TEXT NOT NULL,
+        sensitive INTEGER NOT NULL DEFAULT 0,
+        typed_data TEXT,
         structured_data TEXT,
         created_at TEXT NOT NULL,
         hit_count INTEGER NOT NULL DEFAULT 1
@@ -30,40 +30,47 @@ export class AICache {
     `)
   }
 
-  get(content: string, hint?: string): ClassificationResult | null {
-    const hash = hashContent(content, hint)
+  get(rawInput: string): SmartParseResult | null {
+    const hash = hashContent(rawInput)
     const row = this.db
-      .prepare('SELECT * FROM classification_cache WHERE content_hash = ?')
+      .prepare('SELECT * FROM parse_cache WHERE content_hash = ?')
       .get(hash) as CacheRow | undefined
 
     if (!row) return null
 
-    // Increment hit count
     this.db
-      .prepare('UPDATE classification_cache SET hit_count = hit_count + 1 WHERE content_hash = ?')
+      .prepare('UPDATE parse_cache SET hit_count = hit_count + 1 WHERE content_hash = ?')
       .run(hash)
 
     return {
+      cleanedContent: row.cleaned_content,
+      type: (row.type as SmartParseResult['type']) ?? 'text',
       category: row.category,
       tags: JSON.parse(row.tags),
       title: row.title,
+      sensitive: row.sensitive === 1,
+      typedData: row.typed_data ? JSON.parse(row.typed_data) : undefined,
       structuredData: row.structured_data ? JSON.parse(row.structured_data) : undefined
     }
   }
 
-  set(content: string, hint: string | undefined, result: ClassificationResult): void {
-    const hash = hashContent(content, hint)
+  set(rawInput: string, result: SmartParseResult): void {
+    const hash = hashContent(rawInput)
     this.db
       .prepare(`
-        INSERT OR REPLACE INTO classification_cache
-        (content_hash, category, tags, title, structured_data, created_at, hit_count)
-        VALUES (?, ?, ?, ?, ?, datetime('now'), 1)
+        INSERT OR REPLACE INTO parse_cache
+        (content_hash, cleaned_content, type, category, tags, title, sensitive, typed_data, structured_data, created_at, hit_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 1)
       `)
       .run(
         hash,
+        result.cleanedContent,
+        result.type,
         result.category,
         JSON.stringify(result.tags),
         result.title,
+        result.sensitive ? 1 : 0,
+        result.typedData ? JSON.stringify(result.typedData) : null,
         result.structuredData ? JSON.stringify(result.structuredData) : null
       )
   }
@@ -75,9 +82,13 @@ export class AICache {
 
 interface CacheRow {
   content_hash: string
+  cleaned_content: string
+  type: string
   category: string
   tags: string
   title: string
+  sensitive: number
+  typed_data: string | null
   structured_data: string | null
   created_at: string
   hit_count: number

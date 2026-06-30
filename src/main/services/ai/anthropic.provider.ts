@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { AIProvider } from './base'
-import type { AIProviderConfig, ClassificationResult } from '../../../shared/types'
-import { CLASSIFICATION_SYSTEM_PROMPT, buildClassifyUserMessage } from './prompts'
+import type { AIProviderConfig, SmartParseResult } from '../../../shared/types'
+import { SMART_PARSE_SYSTEM_PROMPT, buildParseUserMessage } from './prompts'
 
 export class AnthropicProvider implements AIProvider {
   readonly config: AIProviderConfig
@@ -12,8 +12,8 @@ export class AnthropicProvider implements AIProvider {
     this.client = new Anthropic({ apiKey: config.apiKey })
   }
 
-  async classify(content: string, hint?: string): Promise<ClassificationResult> {
-    const userMessage = buildClassifyUserMessage(content, hint)
+  async parse(rawInput: string): Promise<SmartParseResult> {
+    const userMessage = buildParseUserMessage(rawInput)
 
     const response = await this.client.messages.create({
       model: this.config.model,
@@ -21,14 +21,14 @@ export class AnthropicProvider implements AIProvider {
       system: [
         {
           type: 'text',
-          text: CLASSIFICATION_SYSTEM_PROMPT,
+          text: SMART_PARSE_SYSTEM_PROMPT,
           cache_control: { type: 'ephemeral' } as never
         }
       ],
       messages: [{ role: 'user', content: userMessage }]
     })
 
-    return this.parseResponse(response)
+    return this.extractResult(response)
   }
 
   async testConnection(): Promise<boolean> {
@@ -44,44 +44,43 @@ export class AnthropicProvider implements AIProvider {
     }
   }
 
-  private parseResponse(response: Anthropic.Messages.Message): ClassificationResult {
+  private extractResult(response: Anthropic.Messages.Message): SmartParseResult {
     const textBlock = response.content.find(
       (block): block is Anthropic.TextBlock => block.type === 'text'
     )
-
-    if (!textBlock) {
-      throw new Error('No text in Anthropic response')
-    }
-
+    if (!textBlock) throw new Error('No text in Anthropic response')
     return extractJSON(textBlock.text)
   }
 }
 
 /**
- * Extract JSON from a string that may be wrapped in markdown code fences.
+ * Extract SmartParseResult from raw JSON string (may be wrapped in markdown fences).
  */
-export function extractJSON(text: string): ClassificationResult {
-  // Try to find JSON inside markdown code fence
+export function extractJSON(text: string): SmartParseResult {
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
   const raw = jsonMatch ? jsonMatch[1].trim() : text.trim()
 
   try {
     const parsed = JSON.parse(raw)
     return {
+      cleanedContent: typeof parsed.cleanedContent === 'string' ? parsed.cleanedContent : text.slice(0, 200),
+      type: ['apikey', 'credential', 'command', 'bookmark', 'text'].includes(parsed.type) ? parsed.type : 'text',
       category: typeof parsed.category === 'string' ? parsed.category : 'Other',
       tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5).map(String) : [],
       title: typeof parsed.title === 'string' ? parsed.title : 'Untitled Note',
-      structuredData:
-        typeof parsed.structuredData === 'object' && parsed.structuredData !== null
-          ? parsed.structuredData
-          : undefined
+      sensitive: parsed.sensitive === true,
+      typedData: typeof parsed.typedData === 'object' && parsed.typedData !== null ? parsed.typedData : undefined,
+      structuredData: typeof parsed.structuredData === 'object' && parsed.structuredData !== null ? parsed.structuredData : undefined,
+      appendToNoteId: typeof parsed.appendToNoteId === 'string' ? parsed.appendToNoteId : undefined
     }
   } catch {
-    // Fallback: use the first line as title
     return {
+      cleanedContent: text.slice(0, 500),
+      type: 'text',
       category: 'Other',
       tags: [],
       title: text.split('\n')[0].slice(0, 80) || 'Untitled Note',
+      sensitive: false,
       structuredData: undefined
     }
   }

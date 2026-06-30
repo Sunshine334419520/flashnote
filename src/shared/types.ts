@@ -2,18 +2,45 @@
 // Core Note entity
 // ============================================================
 
+export type NoteType = 'apikey' | 'credential' | 'command' | 'bookmark' | 'text'
+
 export interface Note {
   id: string
+  type: NoteType
   title: string
   content: string
+  description?: string
   category: string
   tags: string[]
   sourceHint?: string
   metadata: Record<string, unknown>
+  sensitive: boolean
+  typedData?: Record<string, unknown>
   createdAt: string
   updatedAt: string
   isClassified: boolean
   isManuallyEdited: boolean
+  status: 'draft' | 'published'
+}
+
+// ============================================================
+// Task types
+// ============================================================
+
+export interface TaskInfo {
+  id: string
+  noteId: string
+  rawInput: string
+  status: 'processing' | 'done' | 'failed'
+  result?: {
+    category: string
+    tags: string[]
+    title: string
+    elapsedMs: number
+  }
+  error?: string
+  createdAt: string
+  completedAt?: string
 }
 
 // ============================================================
@@ -31,6 +58,7 @@ export interface NoteUpdateRequest {
   content?: string
   category?: string
   tags?: string[]
+  status?: 'draft' | 'published'
 }
 
 // ============================================================
@@ -47,15 +75,21 @@ export interface AIProviderConfig {
   baseURL: string
   model: string
   maxTokens: number
+  thinking?: 'enabled' | 'disabled'
   isActive: boolean
   createdAt: string
 }
 
-export interface ClassificationResult {
+export interface SmartParseResult {
+  cleanedContent: string
+  type: NoteType
   category: string
   tags: string[]
   title: string
+  sensitive: boolean
+  typedData?: Record<string, unknown>
   structuredData?: Record<string, unknown>
+  appendToNoteId?: string  // @ reference → append to existing note
 }
 
 // ============================================================

@@ -1,14 +1,14 @@
-import { app } from 'electron'
+import { homedir } from 'os'
 import { join } from 'path'
 import { mkdirSync, existsSync } from 'fs'
 
 /**
  * Resolve and create the FlashNote storage directory.
  * Default: ~/FlashNote
- * Can be overridden via user config.
+ * Can be overridden via FLASHNOTE_HOME env var or user config.
  */
 export function getDefaultStoragePath(): string {
-  return join(app.getPath('home'), 'FlashNote')
+  return join(process.env.FLASHNOTE_HOME ?? homedir(), 'FlashNote')
 }
 
 export function getNotesPath(storagePath: string): string {

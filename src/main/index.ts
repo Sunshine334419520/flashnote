@@ -5,9 +5,12 @@ import { getDefaultStoragePath, ensureStorageDirectories } from './utils/paths'
 import { loadConfig } from './services/config.service'
 import { initStorageService } from './services/storage.service'
 import { AIService } from './services/ai'
+import { TaskManager } from './services/task-manager'
+import { initLogger, logger } from './utils/logger'
 
 let mainWindow: BrowserWindow | null = null
 let quickCaptureWindow: BrowserWindow | null = null
+let settingsWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 
 const isDev = !app.isPackaged
@@ -42,13 +45,15 @@ function createMainWindow(): void {
 
 function createQuickCaptureWindow(): void {
   quickCaptureWindow = new BrowserWindow({
-    width: 600,
-    height: 320,
+    width: 520,
+    height: 80,
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
+    hasShadow: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -86,6 +91,47 @@ function hideQuickCaptureWindow(): void {
   quickCaptureWindow?.hide()
 }
 
+function createSettingsWindow(): void {
+  settingsWindow = new BrowserWindow({
+    width: 700,
+    height: 560,
+    frame: false,
+    titleBarStyle: 'hidden',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false
+    },
+    show: false
+  })
+
+  settingsWindow.on('ready-to-show', () => {
+    settingsWindow?.show()
+  })
+
+  if (isDev) {
+    settingsWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL!}#/settings`)
+  } else {
+    settingsWindow.loadFile(join(__dirname, '../renderer/index.html'), {
+      hash: '/settings'
+    })
+  }
+}
+
+function showSettingsWindow(): void {
+  if (settingsWindow?.isDestroyed()) {
+    settingsWindow = null
+  }
+
+  if (!settingsWindow) {
+    createSettingsWindow()
+  }
+
+  settingsWindow!.show()
+  settingsWindow!.focus()
+}
+
 function registerGlobalShortcut(hotkey: string): void {
   const registered = globalShortcut.register(hotkey, () => {
     showQuickCaptureWindow()
@@ -96,8 +142,35 @@ function registerGlobalShortcut(hotkey: string): void {
   }
 }
 
+function createTrayIcon(): Electron.NativeImage {
+  // Create a 16x16 tray icon programmatically — a simple "F" dot
+  const size = 16
+  const canvas = Buffer.alloc(size * size * 4)
+
+  // Draw a simple filled circle (dot)
+  const cx = size / 2
+  const cy = size / 2
+  const r = 6
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4
+      const dx = x - cx
+      const dy = y - cy
+      if (dx * dx + dy * dy <= r * r) {
+        canvas[i] = 100     // R
+        canvas[i + 1] = 140  // G
+        canvas[i + 2] = 255  // B
+        canvas[i + 3] = 255  // A
+      }
+    }
+  }
+
+  return nativeImage.createFromBuffer(canvas, { width: size, height: size })
+}
+
 function createTray(): void {
-  const icon = nativeImage.createEmpty()
+  const icon = createTrayIcon()
   tray = new Tray(icon)
 
   const contextMenu = Menu.buildFromTemplate([
@@ -116,6 +189,11 @@ function createTray(): void {
           mainWindow!.show()
         }
       }
+    },
+    { type: 'separator' },
+    {
+      label: 'Settings',
+      click: () => showSettingsWindow()
     },
     { type: 'separator' },
     {
@@ -142,11 +220,22 @@ function createTray(): void {
 // Service initialization
 // ============================================================
 
-function initServices(): { storagePath: string; aiService: AIService } {
+function initServices(): { storagePath: string; aiService: AIService; taskManager: TaskManager } {
   const storagePath = getDefaultStoragePath()
 
   // Ensure ~/FlashNote/ exists with all subdirectories
   ensureStorageDirectories(storagePath)
+
+  // Initialize logger first so all subsequent errors are captured
+  initLogger(storagePath)
+
+  // Global error handlers
+  process.on('uncaughtException', (error) => {
+    logger.error('main:uncaughtException', error.message, { stack: error.stack })
+  })
+  process.on('unhandledRejection', (reason) => {
+    logger.error('main:unhandledRejection', String(reason))
+  })
 
   // Load or create config
   loadConfig(storagePath)
@@ -157,7 +246,12 @@ function initServices(): { storagePath: string; aiService: AIService } {
   // Initialize AI service (loads providers from SQLite settings)
   const aiService = new AIService(storagePath)
 
-  return { storagePath, aiService }
+  // Initialize task manager (in-memory only)
+  const taskManager = new TaskManager()
+
+  logger.info('main:init', 'Services initialized', { storagePath })
+
+  return { storagePath, aiService, taskManager }
 }
 
 // ============================================================
@@ -165,13 +259,15 @@ function initServices(): { storagePath: string; aiService: AIService } {
 // ============================================================
 
 app.whenReady().then(() => {
-  const { storagePath, aiService } = initServices()
+  const { storagePath, aiService, taskManager } = initServices()
 
   registerAllIpcHandlers({
     storagePath,
     aiService,
+    taskManager,
     showQuickCaptureWindow,
-    hideQuickCaptureWindow
+    hideQuickCaptureWindow,
+    showSettingsWindow
   })
 
   createMainWindow()

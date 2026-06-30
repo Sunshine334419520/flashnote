@@ -4,9 +4,14 @@
 
 export interface NoteRow {
   id: string
+  type: string
   title: string
+  content: string
   category: string
   source_hint: string | null
+  status: string
+  sensitive: number
+  typed_data: string | null
   created_at: string
   updated_at: string
   is_classified: number // 0 | 1

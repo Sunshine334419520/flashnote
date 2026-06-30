@@ -1,0 +1,22 @@
+{
+  "name": "flashnote-cli",
+  "version": "0.1.0",
+  "description": "FlashNote CLI — AI-native note taking in your terminal",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "flashnote": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.3"
+  }
+}

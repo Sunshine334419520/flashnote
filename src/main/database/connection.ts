@@ -1,7 +1,4 @@
 import Database from 'better-sqlite3'
-import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
-import { app } from 'electron'
 
 let db: Database.Database | null = null
 
@@ -54,13 +51,17 @@ function runMigrations(database: Database.Database): void {
 
   const version = currentVersion?.version ?? 0
 
-  // Load and apply migration files in order
-  const migrationsDir = join(app.getAppPath(), 'src/main/database/migrations')
-
-  // For production (ASAR), migrations are embedded in the JS bundle
-  // We use inline SQL for the initial migration
   if (version < 1) {
     applyMigration001(database)
+  }
+  if (version < 2) {
+    applyMigration002(database)
+  }
+  if (version < 3) {
+    applyMigration003(database)
+  }
+  if (version < 4) {
+    applyMigration004(database)
   }
 }
 
@@ -70,8 +71,10 @@ function applyMigration001(database: Database.Database): void {
     CREATE TABLE IF NOT EXISTS notes (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
+      content TEXT NOT NULL DEFAULT '',
       category TEXT NOT NULL DEFAULT 'Other',
       source_hint TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       is_classified INTEGER NOT NULL DEFAULT 0,
@@ -156,4 +159,33 @@ function applyMigration001(database: Database.Database): void {
 
   // Mark migration as applied
   database.prepare('INSERT INTO _schema_version (version) VALUES (1)').run()
+}
+
+function applyMigration002(database: Database.Database): void {
+  // Add status column to notes (for existing DBs that already have v1)
+  try {
+    database.exec(`ALTER TABLE notes ADD COLUMN status TEXT NOT NULL DEFAULT 'draft'`)
+  } catch {
+    // Column already exists — ignore
+  }
+
+  // Update all existing notes to 'published' (they predate the task system)
+  database.prepare("UPDATE notes SET status = 'published' WHERE status = 'draft'").run()
+
+  database.prepare('INSERT INTO _schema_version (version) VALUES (2)').run()
+}
+
+function applyMigration003(database: Database.Database): void {
+  // Add type, sensitive, typed_data columns for typed content system
+  try { database.exec(`ALTER TABLE notes ADD COLUMN type TEXT NOT NULL DEFAULT 'text'`) } catch { /* exists */ }
+  try { database.exec(`ALTER TABLE notes ADD COLUMN sensitive INTEGER NOT NULL DEFAULT 0`) } catch { /* exists */ }
+  try { database.exec(`ALTER TABLE notes ADD COLUMN typed_data TEXT`) } catch { /* exists */ }
+
+  database.prepare('INSERT INTO _schema_version (version) VALUES (3)').run()
+}
+
+function applyMigration004(database: Database.Database): void {
+  // Add content column to notes (previously only stored in .md files)
+  try { database.exec(`ALTER TABLE notes ADD COLUMN content TEXT NOT NULL DEFAULT ''`) } catch { /* exists */ }
+  database.prepare('INSERT INTO _schema_version (version) VALUES (4)').run()
 }

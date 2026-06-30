@@ -2,12 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
 import type {
   AIProviderConfig,
-  ClassificationResult,
+  SmartParseResult,
   Note,
   NoteCreateRequest,
   NoteUpdateRequest,
   SearchQuery,
-  SearchResult
+  SearchResult,
+  TaskInfo
 } from '../shared/types'
 
 const electronAPI = {
@@ -45,11 +46,9 @@ const electronAPI = {
       test: (id: string): Promise<boolean> =>
         ipcRenderer.invoke(IPC_CHANNELS.AI_PROVIDER_TEST, id)
     },
-    // Classification
-    classify: (content: string, hint?: string): Promise<ClassificationResult> =>
-      ipcRenderer.invoke(IPC_CHANNELS.AI_CLASSIFY, { content, hint }),
-    reclassify: (noteId: string): Promise<unknown> =>
-      ipcRenderer.invoke(IPC_CHANNELS.AI_RECLASSIFY, noteId)
+    // Smart parse
+    parse: (rawInput: string): Promise<SmartParseResult> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_PARSE, { rawInput })
   },
 
   search: {
@@ -66,6 +65,10 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET_ALL)
   },
 
+  tasks: {
+    list: (): Promise<TaskInfo[]> => ipcRenderer.invoke(IPC_CHANNELS.TASK_LIST)
+  },
+
   window: {
     showQuickCapture: (): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.WINDOW_SHOW_QUICK_CAPTURE),
@@ -80,7 +83,10 @@ const electronAPI = {
       IPC_CHANNELS.EVENT_NOTE_UPDATED,
       IPC_CHANNELS.EVENT_NOTE_DELETED,
       IPC_CHANNELS.EVENT_AI_COMPLETE,
-      IPC_CHANNELS.EVENT_SETTINGS_CHANGED
+      IPC_CHANNELS.EVENT_SETTINGS_CHANGED,
+      IPC_CHANNELS.EVENT_TASK_CREATED,
+      IPC_CHANNELS.EVENT_TASK_COMPLETED,
+      IPC_CHANNELS.EVENT_TASK_FAILED
     ]
 
     if (!validEvents.includes(channel)) {

@@ -32,14 +32,21 @@ export function insertNote(note: Note): void {
   const contentHash = hashFileContent(note.content)
   const wordCount = note.content.split(/\s+/).filter(Boolean).length
 
+  const contentPreview = note.content.length > 2000 ? note.content.slice(0, 2000) : note.content
+
   db.prepare(`
-    INSERT INTO notes (id, title, category, source_hint, created_at, updated_at, is_classified, is_manually_edited, content_hash, word_count)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO notes (id, type, title, content, category, source_hint, status, sensitive, typed_data, created_at, updated_at, is_classified, is_manually_edited, content_hash, word_count)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     note.id,
+    note.type,
     note.title,
+    contentPreview,
     note.category,
     note.sourceHint ?? null,
+    note.status,
+    note.sensitive ? 1 : 0,
+    note.typedData ? JSON.stringify(note.typedData) : null,
     note.createdAt,
     note.updatedAt,
     note.isClassified ? 1 : 0,
@@ -66,15 +73,22 @@ export function updateNote(note: Note): void {
   const contentHash = hashFileContent(note.content)
   const wordCount = note.content.split(/\s+/).filter(Boolean).length
 
+  const contentPreview = note.content.length > 2000 ? note.content.slice(0, 2000) : note.content
+
   db.prepare(`
     UPDATE notes SET
-      title = ?, category = ?, source_hint = ?, updated_at = ?,
+      type = ?, title = ?, content = ?, category = ?, source_hint = ?, status = ?, sensitive = ?, typed_data = ?, updated_at = ?,
       is_classified = ?, is_manually_edited = ?, content_hash = ?, word_count = ?
     WHERE id = ?
   `).run(
+    note.type,
     note.title,
+    contentPreview,
     note.category,
     note.sourceHint ?? null,
+    note.status,
+    note.sensitive ? 1 : 0,
+    note.typedData ? JSON.stringify(note.typedData) : null,
     note.updatedAt,
     note.isClassified ? 1 : 0,
     note.isManuallyEdited ? 1 : 0,
@@ -127,7 +141,7 @@ export function listNotes(query?: SearchQuery): SearchResult {
   const sortColumn = sortBy === 'title' ? 'title' : sortBy === 'updatedAt' ? 'updated_at' : 'created_at'
   const order = sortOrder === 'asc' ? 'ASC' : 'DESC'
 
-  let sql = 'SELECT * FROM notes'
+  let sql = "SELECT * FROM notes WHERE status = 'published'"
   const conditions: string[] = []
   const params: unknown[] = []
 
@@ -145,7 +159,7 @@ export function listNotes(query?: SearchQuery): SearchResult {
   }
 
   if (conditions.length > 0) {
-    sql += ' WHERE ' + conditions.join(' AND ')
+    sql += ' AND ' + conditions.join(' AND ')
   }
 
   // Count total
@@ -321,15 +335,19 @@ function rowToNote(row: NoteRow): Note {
 
   return {
     id: row.id,
+    type: (row.type as Note['type']) ?? 'text',
     title: row.title,
-    content: '', // Content lives in .md files, not in SQLite
+    content: row.content ?? '',
     category: row.category,
     tags: tagRows.map((t) => t.name),
     sourceHint: row.source_hint ?? undefined,
     metadata: {},
+    sensitive: row.sensitive === 1,
+    typedData: row.typed_data ? JSON.parse(row.typed_data) : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     isClassified: row.is_classified === 1,
-    isManuallyEdited: row.is_manually_edited === 1
+    isManuallyEdited: row.is_manually_edited === 1,
+    status: (row.status as 'draft' | 'published') ?? 'draft'
   }
 }

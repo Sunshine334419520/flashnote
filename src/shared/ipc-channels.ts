@@ -19,8 +19,7 @@ export const IPC_CHANNELS = {
   AI_PROVIDER_TEST: 'ai:provider:test',
 
   // AI — Classification
-  AI_CLASSIFY: 'ai:classify',
-  AI_RECLASSIFY: 'ai:reclassify',
+  AI_PARSE: 'ai:parse',
 
   // Search
   SEARCH_QUERY: 'search:query',
@@ -35,12 +34,18 @@ export const IPC_CHANNELS = {
   WINDOW_HIDE_QUICK_CAPTURE: 'window:hide-quick-capture',
   WINDOW_SHOW_MAIN: 'window:show-main',
 
+  // Task
+  TASK_LIST: 'task:list',
+
   // Events (main → renderer push)
   EVENT_NOTE_CREATED: 'event:note-created',
   EVENT_NOTE_UPDATED: 'event:note-updated',
   EVENT_NOTE_DELETED: 'event:note-deleted',
   EVENT_AI_COMPLETE: 'event:ai-classification-complete',
-  EVENT_SETTINGS_CHANGED: 'event:settings-changed'
+  EVENT_SETTINGS_CHANGED: 'event:settings-changed',
+  EVENT_TASK_CREATED: 'event:task-created',
+  EVENT_TASK_COMPLETED: 'event:task-completed',
+  EVENT_TASK_FAILED: 'event:task-failed'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

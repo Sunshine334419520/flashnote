@@ -1,83 +1,68 @@
-import { type ReactElement, useState, useEffect, useRef, useCallback } from 'react'
+import { type ReactElement, useState, useRef, useEffect, useCallback } from 'react'
 
 export function QuickCapture(): ReactElement {
-  const [content, setContent] = useState('')
-  const [hint, setHint] = useState('')
+  const [input, setInput] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const isComposing = useRef(false)
+
+  // Make body fully transparent for this window (only the card should be visible)
+  useEffect(() => {
+    const orig = document.body.style.backgroundColor
+    document.body.style.backgroundColor = 'transparent'
+    return () => {
+      document.body.style.backgroundColor = orig
+    }
+  }, [])
 
   useEffect(() => {
-    textareaRef.current?.focus()
+    const timer = setTimeout(() => inputRef.current?.focus(), 100)
+    return () => clearTimeout(timer)
   }, [])
 
   const handleSave = useCallback(async () => {
-    if (!content.trim() || isSaving) return
-
+    const trimmed = input.trim()
+    if (!trimmed || isSaving) return
     setIsSaving(true)
     try {
-      await window.electronAPI.notes.create({
-        content: content.trim(),
-        sourceHint: hint.trim() || undefined
-      })
-      setContent('')
-      setHint('')
+      await window.electronAPI.notes.create({ content: trimmed })
       window.electronAPI.window.hideQuickCapture()
     } catch (err) {
-      console.error('Failed to save note:', err)
-    } finally {
+      console.error('Save failed:', err)
       setIsSaving(false)
     }
-  }, [content, hint, isSaving])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        handleSave()
-      } else if (e.key === 'Escape') {
-        window.electronAPI.window.hideQuickCapture()
-      }
-    },
-    [handleSave]
-  )
+  }, [input, isSaving])
 
   return (
-    <div className="h-screen flex items-center justify-center bg-black/20">
-      <div className="w-full max-w-lg bg-card rounded-xl shadow-2xl border p-6 space-y-4">
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Paste or type your note content here..."
-          className="w-full h-32 bg-transparent text-base resize-none outline-none placeholder:text-muted-foreground"
-          disabled={isSaving}
-        />
-
+    <div
+      className="h-full bg-transparent flex items-center justify-center"
+      onMouseDown={() => window.electronAPI.window.hideQuickCapture()}
+    >
+      <div
+        className="w-[500px] bg-card rounded-xl shadow-2xl border border-border/50 px-4 py-3"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <input
+          ref={inputRef}
           type="text"
-          value={hint}
-          onChange={(e) => setHint(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder='What is this? (e.g. "DeepSeek API key", "meeting notes")'
-          className="w-full bg-muted/50 rounded-lg px-3 py-2 text-sm outline-none border border-transparent focus:border-primary/30 transition-colors placeholder:text-muted-foreground/60"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onCompositionStart={() => { isComposing.current = true }}
+          onCompositionEnd={() => { isComposing.current = false }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !isComposing.current) {
+              e.preventDefault()
+              handleSave()
+            } else if (e.key === 'Escape' && !isComposing.current) {
+              window.electronAPI.window.hideQuickCapture()
+            }
+          }}
+          placeholder="Type your note and press Enter..."
+          className="w-full bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/50 text-foreground"
           disabled={isSaving}
+          autoFocus
+          spellCheck={false}
         />
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            <kbd className="px-1.5 py-0.5 rounded bg-muted text-[11px] font-mono">⌘Enter</kbd> to save
-            {' · '}
-            <kbd className="px-1.5 py-0.5 rounded bg-muted text-[11px] font-mono">Esc</kbd> to cancel
-          </span>
-          <button
-            onClick={handleSave}
-            disabled={!content.trim() || isSaving}
-            className="px-4 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
-          >
-            {isSaving ? 'Saving...' : 'Capture'}
-          </button>
-        </div>
       </div>
     </div>
   )

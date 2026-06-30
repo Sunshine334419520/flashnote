@@ -4,8 +4,9 @@ import { join } from 'path'
 import { AICache } from './cache'
 import { AnthropicProvider } from './anthropic.provider'
 import { OpenAICompatibleProvider } from './openai-compat.provider'
+import { heuristicParse } from './base'
 import type { AIProvider } from './base'
-import type { AIProviderConfig, AIProviderType, ClassificationResult } from '../../../shared/types'
+import type { AIProviderConfig, AIProviderType, SmartParseResult } from '../../../shared/types'
 import type { SettingRow } from '../../database/schema'
 
 export class AIService {
@@ -21,7 +22,7 @@ export class AIService {
   }
 
   // ============================================================
-  // Provider management
+  // Provider management (unchanged)
   // ============================================================
 
   listProviders(): AIProviderConfig[] {
@@ -36,46 +37,25 @@ export class AIService {
   addProvider(config: Omit<AIProviderConfig, 'id' | 'createdAt' | 'isActive'>): AIProviderConfig {
     const id = uuidv4()
     const now = new Date().toISOString()
-
-    // If this is the first provider, make it active
     const isActive = this.providers.size === 0
-
-    const fullConfig: AIProviderConfig = {
-      ...config,
-      id,
-      createdAt: now,
-      isActive
-    }
-
-    if (isActive) {
-      this.activeProviderId = id
-    }
-
-    const provider = this.createProvider(fullConfig)
-    this.providers.set(id, provider)
+    const fullConfig: AIProviderConfig = { ...config, id, createdAt: now, isActive }
+    if (isActive) this.activeProviderId = id
+    this.providers.set(id, this.createProvider(fullConfig))
     this.saveToDisk()
-
     return fullConfig
   }
 
   updateProvider(id: string, updates: Partial<AIProviderConfig>): AIProviderConfig {
     const existing = this.providers.get(id)
     if (!existing) throw new Error(`Provider not found: ${id}`)
-
     const updated: AIProviderConfig = { ...existing.config, ...updates, id }
-
-    // Re-create provider instance with new config
-    const provider = this.createProvider(updated)
-    this.providers.set(id, provider)
+    this.providers.set(id, this.createProvider(updated))
     this.saveToDisk()
-
     return updated
   }
 
   deleteProvider(id: string): void {
     this.providers.delete(id)
-
-    // If deleted the active provider, activate the first remaining one
     if (this.activeProviderId === id) {
       const first = this.providers.values().next().value
       if (first) {
@@ -85,24 +65,18 @@ export class AIService {
         this.activeProviderId = null
       }
     }
-
     this.saveToDisk()
   }
 
   setActiveProvider(id: string): void {
     if (!this.providers.has(id)) throw new Error(`Provider not found: ${id}`)
-
-    // Deactivate current
     if (this.activeProviderId) {
       const current = this.providers.get(this.activeProviderId)
       if (current) current.config.isActive = false
     }
-
-    // Activate new
     const next = this.providers.get(id)!
     next.config.isActive = true
     this.activeProviderId = id
-
     this.saveToDisk()
   }
 
@@ -113,26 +87,33 @@ export class AIService {
   }
 
   // ============================================================
-  // Classification
+  // Smart Parse
   // ============================================================
 
-  async classify(content: string, hint?: string): Promise<ClassificationResult> {
-    // Check cache first (cross-provider)
-    const cached = this.cache.get(content, hint)
+  async parse(rawInput: string): Promise<SmartParseResult> {
+    // 1. Cache check
+    const cached = this.cache.get(rawInput)
     if (cached) return cached
 
+    // 2. Fallback: no active provider → heuristic
     const provider = this.getActiveProvider()
     if (!provider) {
-      throw new Error('No active AI provider configured. Add a provider in Settings.')
+      return heuristicParse(rawInput)
     }
 
-    const result = await provider.classify(content, hint)
-    this.cache.set(content, hint, result)
-    return result
+    // 3. AI parse
+    try {
+      const result = await provider.parse(rawInput)
+      this.cache.set(rawInput, result)
+      return result
+    } catch (err) {
+      console.warn('AI parse failed, falling back to heuristic:', err)
+      return heuristicParse(rawInput)
+    }
   }
 
   // ============================================================
-  // Persistence (SQLite settings table)
+  // Persistence
   // ============================================================
 
   private loadFromDisk(): void {
@@ -141,19 +122,14 @@ export class AIService {
       const row = db.prepare("SELECT value FROM settings WHERE key = 'ai_providers'").get() as
         | SettingRow
         | undefined
-
       if (!row) return
-
       const configs: AIProviderConfig[] = JSON.parse(row.value)
       for (const config of configs) {
-        const provider = this.createProvider(config)
-        this.providers.set(config.id, provider)
-        if (config.isActive) {
-          this.activeProviderId = config.id
-        }
+        this.providers.set(config.id, this.createProvider(config))
+        if (config.isActive) this.activeProviderId = config.id
       }
     } catch (err) {
-      console.warn('Failed to load AI providers from disk:', err)
+      console.warn('Failed to load AI providers:', err)
     }
   }
 
@@ -161,20 +137,14 @@ export class AIService {
     try {
       const db = getDatabase(join(this.storagePath, 'index.db'))
       const configs = Array.from(this.providers.values()).map((p) => ({ ...p.config }))
-      const json = JSON.stringify(configs)
       const now = new Date().toISOString()
-
       db.prepare(
         "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('ai_providers', ?, ?)"
-      ).run(json, now)
+      ).run(JSON.stringify(configs), now)
     } catch (err) {
-      console.error('Failed to save AI providers to disk:', err)
+      console.error('Failed to save AI providers:', err)
     }
   }
-
-  // ============================================================
-  // Factory
-  // ============================================================
 
   private createProvider(config: AIProviderConfig): AIProvider {
     switch (config.type) {

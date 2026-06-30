@@ -1,15 +1,12 @@
 import type { AIProvider } from './base'
-import type { AIProviderConfig, ClassificationResult } from '../../../shared/types'
-import { CLASSIFICATION_SYSTEM_PROMPT, buildClassifyUserMessage } from './prompts'
+import type { AIProviderConfig, SmartParseResult } from '../../../shared/types'
+import { SMART_PARSE_SYSTEM_PROMPT, buildParseUserMessage } from './prompts'
 import { extractJSON } from './anthropic.provider'
 
 /**
  * OpenAI-compatible Chat Completions provider.
  * Covers: OpenAI, DeepSeek, Moonshot, Zhipu, and custom endpoints.
- *
- * Uses raw fetch() instead of the openai SDK to:
- * 1. Avoid adding another dependency
- * 2. Support any OpenAI-compatible API with custom baseURL
+ * Uses raw fetch() — no extra dependencies.
  */
 export class OpenAICompatibleProvider implements AIProvider {
   readonly config: AIProviderConfig
@@ -18,9 +15,25 @@ export class OpenAICompatibleProvider implements AIProvider {
     this.config = config
   }
 
-  async classify(content: string, hint?: string): Promise<ClassificationResult> {
-    const userMessage = buildClassifyUserMessage(content, hint)
+  async parse(rawInput: string): Promise<SmartParseResult> {
+    const userMessage = buildParseUserMessage(rawInput)
     const url = `${this.config.baseURL}/chat/completions`
+
+    const body: Record<string, unknown> = {
+      model: this.config.model,
+      max_tokens: this.config.maxTokens,
+      temperature: 0.1,
+      messages: [
+        { role: 'system', content: SMART_PARSE_SYSTEM_PROMPT },
+        { role: 'user', content: userMessage }
+      ],
+      response_format: { type: 'json_object' }
+    }
+
+    // DeepSeek thinking mode
+    if (this.config.thinking === 'enabled') {
+      body.thinking = { type: 'enabled' }
+    }
 
     const response = await fetch(url, {
       method: 'POST',
@@ -28,16 +41,7 @@ export class OpenAICompatibleProvider implements AIProvider {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.config.apiKey}`
       },
-      body: JSON.stringify({
-        model: this.config.model,
-        max_tokens: this.config.maxTokens,
-        temperature: 0.1,
-        messages: [
-          { role: 'system', content: CLASSIFICATION_SYSTEM_PROMPT },
-          { role: 'user', content: userMessage }
-        ],
-        response_format: { type: 'json_object' }
-      })
+      body: JSON.stringify(body)
     })
 
     if (!response.ok) {
@@ -48,8 +52,8 @@ export class OpenAICompatibleProvider implements AIProvider {
     }
 
     const data = (await response.json()) as OpenAIResponse
-    const content_text = data.choices?.[0]?.message?.content ?? ''
-    return extractJSON(content_text)
+    const contentText = data.choices?.[0]?.message?.content ?? ''
+    return extractJSON(contentText)
   }
 
   async testConnection(): Promise<boolean> {
@@ -74,18 +78,7 @@ export class OpenAICompatibleProvider implements AIProvider {
   }
 }
 
-// ============================================================
-// Response types
-// ============================================================
-
 interface OpenAIResponse {
-  choices?: Array<{
-    message?: {
-      content?: string
-    }
-  }>
-  error?: {
-    message: string
-    type: string
-  }
+  choices?: Array<{ message?: { content?: string } }>
+  error?: { message: string; type: string }
 }

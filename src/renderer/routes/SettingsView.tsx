@@ -1,12 +1,10 @@
 import type { ReactElement } from 'react'
+import { AIProviderSettings } from '../components/settings/AIProviderSettings'
 
 export function SettingsView(): ReactElement {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Coming in Phase 5</p>
-      </div>
+    <div className="h-screen bg-background overflow-y-auto">
+      <AIProviderSettings />
     </div>
   )
 }
