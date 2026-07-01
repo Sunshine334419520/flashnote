@@ -1,5 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import { EOL } from 'os'
 
 let logDir: string | null = null
 
@@ -29,7 +30,7 @@ function write(level: string, source: string, message: string, data?: unknown): 
   const path = getLogPath()
   if (path) {
     try {
-      appendFileSync(path, full + '\n')
+      appendFileSync(path, full + EOL)
     } catch {
       // fail silently
     }

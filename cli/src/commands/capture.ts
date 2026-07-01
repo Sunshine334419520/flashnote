@@ -1,7 +1,5 @@
 import { Command } from 'commander'
-import { homedir } from 'os'
-import { join } from 'path'
-import { ensureStorageDirectories } from '@utils/paths'
+import { ensureStorageDirectories, getDefaultStoragePath } from '@utils/paths'
 import { loadConfig } from '@services/config.service'
 import { initStorageService, createNote, modifyNote } from '@services/storage.service'
 import { AIService } from '@services/ai'
@@ -11,7 +9,7 @@ export const captureCommand = new Command('capture')
   .argument('<input...>', 'Your note content (natural language, AI will figure out the rest)')
   .action(async (inputParts: string[]) => {
     const rawInput = inputParts.join(' ')
-    const storagePath = join(process.env.FLASHNOTE_HOME ?? homedir(), 'FlashNote')
+    const storagePath = getDefaultStoragePath()
 
     try {
       // Init

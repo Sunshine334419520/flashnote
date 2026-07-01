@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { execSync } from 'child_process'
+import { spawnSync } from 'child_process'
 import { join } from 'path'
 import { existsSync, mkdirSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
@@ -10,25 +10,20 @@ const TMP_STORAGE = join(TMP_HOME, 'FlashNote')
 const ROOT = join(__dirname, '..')
 
 function run(args: string): string {
-  // Use execFile-style via sh -c to avoid shell injection issues with special chars
-  const cmd = `FLASHNOTE_HOME="${TMP_HOME}" npx tsx --tsconfig cli/tsconfig.json cli/src/index.ts ${args}`
-  try {
-    return execSync(cmd, {
-      cwd: ROOT,
-      encoding: 'utf-8',
-      timeout: 30000,
-      env: { ...process.env, FLASHNOTE_HOME: TMP_HOME },
-      shell: '/bin/bash'
-    })
-  } catch (err) {
-    const e = err as { stdout?: string; stderr?: string }
-    return e.stdout ?? e.stderr ?? String(err)
-  }
-}
-
-/** Escape single quotes for shell */
-function sq(s: string): string {
-  return `'${s.replace(/'/g, "'\\''")}'`
+  // Use spawnSync with the OS default shell (cmd.exe on Windows, /bin/sh on
+  // unix) so npx/.cmd resolution works everywhere. Hardcoding '/bin/bash'
+  // broke on Windows (Node can't resolve that POSIX path → ENOENT).
+  const cmd = `npx tsx --tsconfig cli/tsconfig.json cli/src/index.ts ${args}`
+  const result = spawnSync(cmd, {
+    cwd: ROOT,
+    encoding: 'utf-8',
+    timeout: 30000,
+    env: { ...process.env, FLASHNOTE_HOME: TMP_HOME },
+    shell: true
+  })
+  // Tests only inspect output text; merge streams to preserve the old
+  // "capture stdout-or-stderr" catch-branch semantics.
+  return (result.stdout ?? '') + (result.stderr ?? '')
 }
 
 describe('CLI Integration Tests', () => {

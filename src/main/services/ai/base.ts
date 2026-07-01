@@ -43,7 +43,8 @@ export function heuristicParse(rawInput: string): SmartParseResult {
   // Command detection: common CLI patterns
   const cmdIndicators = [
     'docker ', 'npm ', 'pnpm ', 'yarn ', 'kubectl ', 'git ',
-    'pip ', 'brew ', 'curl ', 'wget ', 'ssh ', 'scp '
+    'pip ', 'brew ', 'curl ', 'wget ', 'ssh ', 'scp ',
+    'apt ', 'apt-get ', 'yum ', 'dnf ', 'pacman '
   ]
   for (const indicator of cmdIndicators) {
     if (trimmed.startsWith(indicator)) {

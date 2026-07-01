@@ -1,7 +1,5 @@
 import { Command } from 'commander'
-import { homedir } from 'os'
-import { join } from 'path'
-import { ensureStorageDirectories } from '@utils/paths'
+import { ensureStorageDirectories, getDefaultStoragePath } from '@utils/paths'
 import { loadConfig } from '@services/config.service'
 import { initStorageService, getNotes } from '@services/storage.service'
 
@@ -11,7 +9,7 @@ export const listCommand = new Command('list')
   .option('-t, --type <type>', 'Filter by type (apikey|credential|command|bookmark|text)')
   .option('-n, --limit <n>', 'Max results', '20')
   .action(async (options) => {
-    const storagePath = join(process.env.FLASHNOTE_HOME ?? homedir(), 'FlashNote')
+    const storagePath = getDefaultStoragePath()
 
     ensureStorageDirectories(storagePath)
     loadConfig(storagePath)
