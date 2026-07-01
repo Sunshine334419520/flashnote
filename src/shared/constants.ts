@@ -16,7 +16,12 @@ export const DEFAULT_CATEGORIES = [
   'Other'
 ] as const
 
-export const DEFAULT_HOTKEY = 'Alt+Space'
+// Alt+Space is claimed by the Windows system menu (and some Linux DEs), so
+// globalShortcut.register would silently fail there. Pick a safe default per OS.
+export const DEFAULT_HOTKEY =
+  process.platform === 'win32'
+    ? 'Alt+Shift+Space'
+    : 'Alt+Space' // macOS (Spotlight is Cmd+Space) and most Linux DEs
 
 export const MAX_CONTENT_LENGTH_FOR_AI = 8000
 

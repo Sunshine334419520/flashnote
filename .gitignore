@@ -17,3 +17,6 @@ pnpm-debug.log*
 
 # Build artifacts
 release/
+
+# Claude Code (machine-specific local env; skills/hooks/settings.json stay checked in)
+.claude/settings.local.json

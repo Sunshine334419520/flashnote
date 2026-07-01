@@ -7,6 +7,7 @@ import { initStorageService } from './services/storage.service'
 import { AIService } from './services/ai'
 import { TaskManager } from './services/task-manager'
 import { initLogger, logger } from './utils/logger'
+import { DEFAULT_HOTKEY } from '../shared/constants'
 
 let mainWindow: BrowserWindow | null = null
 let quickCaptureWindow: BrowserWindow | null = null
@@ -15,14 +16,26 @@ let tray: Tray | null = null
 
 const isDev = !app.isPackaged
 
+/**
+ * Platform-aware window frame options. The renderer has no custom window
+ * controls (min/max/close), so on Windows/Linux we must keep the native frame.
+ * On macOS we use hiddenInset for a clean look that still shows traffic lights.
+ * QuickCapture is intentionally frameless regardless of platform.
+ */
+function windowFrameOptions(): { frame?: boolean; titleBarStyle?: 'hiddenInset' } {
+  if (process.platform === 'darwin') {
+    return { titleBarStyle: 'hiddenInset' }
+  }
+  return { frame: true }
+}
+
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 500,
-    frame: false,
-    titleBarStyle: 'hidden',
+    ...windowFrameOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -95,8 +108,7 @@ function createSettingsWindow(): void {
   settingsWindow = new BrowserWindow({
     width: 700,
     height: 560,
-    frame: false,
-    titleBarStyle: 'hidden',
+    ...windowFrameOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -130,6 +142,19 @@ function showSettingsWindow(): void {
 
   settingsWindow!.show()
   settingsWindow!.focus()
+}
+
+function showMainWindow(): void {
+  if (mainWindow?.isDestroyed()) {
+    mainWindow = null
+  }
+
+  if (!mainWindow) {
+    createMainWindow()
+  }
+
+  mainWindow!.show()
+  mainWindow!.focus()
 }
 
 function registerGlobalShortcut(hotkey: string): void {
@@ -267,13 +292,14 @@ app.whenReady().then(() => {
     taskManager,
     showQuickCaptureWindow,
     hideQuickCaptureWindow,
-    showSettingsWindow
+    showSettingsWindow,
+    showMainWindow
   })
 
   createMainWindow()
   createQuickCaptureWindow()
   createTray()
-  registerGlobalShortcut('Alt+Space')
+  registerGlobalShortcut(DEFAULT_HOTKEY)
 })
 
 app.on('window-all-closed', () => {

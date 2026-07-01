@@ -9,7 +9,7 @@ export function heuristicParse(rawInput: string): SmartParseResult {
   const firstLine = trimmed.split(/[\n\r]+/)[0]
 
   // API Key detection
-  const apiKeyPrefixes = ['sk-', 'sk-', 'api-', 'key-', 'token-', 'ghp_', 'gho_', 'github_pat_']
+  const apiKeyPrefixes = ['sk-', 'api-', 'key-', 'token-', 'ghp_', 'gho_', 'github_pat_']
   for (const prefix of apiKeyPrefixes) {
     if (trimmed.startsWith(prefix) || trimmed.includes(prefix)) {
       return {
@@ -43,7 +43,8 @@ export function heuristicParse(rawInput: string): SmartParseResult {
   // Command detection: common CLI patterns
   const cmdIndicators = [
     'docker ', 'npm ', 'pnpm ', 'yarn ', 'kubectl ', 'git ',
-    'pip ', 'brew ', 'curl ', 'wget ', 'ssh ', 'scp '
+    'pip ', 'brew ', 'curl ', 'wget ', 'ssh ', 'scp ',
+    'apt ', 'apt-get ', 'yum ', 'dnf ', 'pacman '
   ]
   for (const indicator of cmdIndicators) {
     if (trimmed.startsWith(indicator)) {

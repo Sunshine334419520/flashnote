@@ -1,7 +1,5 @@
 import { Command } from 'commander'
-import { homedir } from 'os'
-import { join } from 'path'
-import { ensureStorageDirectories } from '@utils/paths'
+import { ensureStorageDirectories, getDefaultStoragePath } from '@utils/paths'
 import { loadConfig } from '@services/config.service'
 import { initStorageService, createNote, modifyNote } from '@services/storage.service'
 import { AIService } from '@services/ai'
@@ -11,43 +9,50 @@ export const captureCommand = new Command('capture')
   .argument('<input...>', 'Your note content (natural language, AI will figure out the rest)')
   .action(async (inputParts: string[]) => {
     const rawInput = inputParts.join(' ')
-    const storagePath = join(process.env.FLASHNOTE_HOME ?? homedir(), 'FlashNote')
+    const storagePath = getDefaultStoragePath()
 
-    // Init
-    ensureStorageDirectories(storagePath)
-    loadConfig(storagePath)
-    initStorageService(storagePath)
-    const ai = new AIService(storagePath)
+    try {
+      // Init
+      ensureStorageDirectories(storagePath)
+      loadConfig(storagePath)
+      initStorageService(storagePath)
+      const ai = new AIService(storagePath)
 
-    console.log(`\n📝 Capturing: "${rawInput.slice(0, 80)}${rawInput.length > 80 ? '...' : ''}"`)
-    console.log('⏳ Parsing with AI...')
+      console.log(`\n📝 Capturing: "${rawInput.slice(0, 80)}${rawInput.length > 80 ? '...' : ''}"`)
+      console.log('⏳ Parsing with AI...')
 
-    const parsed = await ai.parse(rawInput)
+      // AIService.parse already falls back to heuristicParse on AI failure, but
+      // wrap the whole capture chain so storage/DB errors don't crash unhandled.
+      const parsed = await ai.parse(rawInput)
 
-    const note = createNote(
-      { content: parsed.cleanedContent },
-      {
-        type: parsed.type,
-        category: parsed.category,
-        tags: parsed.tags,
-        title: parsed.title,
-        sensitive: parsed.sensitive,
-        typedData: parsed.typedData
+      const note = createNote(
+        { content: parsed.cleanedContent },
+        {
+          type: parsed.type,
+          category: parsed.category,
+          tags: parsed.tags,
+          title: parsed.title,
+          sensitive: parsed.sensitive,
+          typedData: parsed.typedData
+        }
+      )
+      // Publish immediately for CLI (no async task queue needed)
+      modifyNote({ id: note.id, status: 'published' })
+
+      console.log('')
+      console.log(`✅ Saved: "${note.title}"`)
+      console.log(`   ID:       ${note.id}`)
+      console.log(`   Type:     ${note.type}`)
+      console.log(`   Category: ${note.category}`)
+      console.log(`   Tags:     ${note.tags.join(', ') || '(none)'}`)
+      if (note.sensitive) {
+        console.log(`   🔒 Sensitive (masked on card)`)
       }
-    )
-    // Publish immediately for CLI (no async task queue needed)
-    modifyNote({ id: note.id, status: 'published' })
+      console.log('')
 
-    console.log('')
-    console.log(`✅ Saved: "${note.title}"`)
-    console.log(`   ID:       ${note.id}`)
-    console.log(`   Type:     ${note.type}`)
-    console.log(`   Category: ${note.category}`)
-    console.log(`   Tags:     ${note.tags.join(', ') || '(none)'}`)
-    if (note.sensitive) {
-      console.log(`   🔒 Sensitive (masked on card)`)
+      process.exit(0)
+    } catch (err) {
+      console.error(`\n❌ Capture failed: ${(err as Error).message}`)
+      process.exit(1)
     }
-    console.log('')
-
-    process.exit(0)
   })

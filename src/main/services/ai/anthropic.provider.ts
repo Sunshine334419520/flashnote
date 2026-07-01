@@ -79,7 +79,7 @@ export function extractJSON(text: string): SmartParseResult {
       type: 'text',
       category: 'Other',
       tags: [],
-      title: text.split('\n')[0].slice(0, 80) || 'Untitled Note',
+      title: text.split(/\r?\n/)[0].slice(0, 80) || 'Untitled Note',
       sensitive: false,
       structuredData: undefined
     }

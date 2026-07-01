@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          { "type": "command", "command": "bash .claude/hooks/bootstrap-env-path.sh" }
+        ]
+      },
+      {
+        "matcher": "resume",
+        "hooks": [
+          { "type": "command", "command": "bash .claude/hooks/bootstrap-env-path.sh" }
+        ]
+      },
+      {
+        "matcher": "clear",
+        "hooks": [
+          { "type": "command", "command": "bash .claude/hooks/bootstrap-env-path.sh" }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          { "type": "command", "command": "bash .claude/hooks/bootstrap-env-path.sh" }
+        ]
+      }
+    ]
+  }
+}

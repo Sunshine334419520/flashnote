@@ -1,22 +1,19 @@
 import { Command } from 'commander'
-import { homedir } from 'os'
-import { join } from 'path'
-import { ensureStorageDirectories } from '@utils/paths'
+import { ensureStorageDirectories, getDefaultStoragePath } from '@utils/paths'
 import { loadConfig } from '@services/config.service'
-import { initStorageService, readNote } from '@services/storage.service'
+import { initStorageService, readNote, getNotes } from '@services/storage.service'
 
 export const showCommand = new Command('show')
   .description('Show full content of a note')
   .argument('<id>', 'Note ID (first 8 chars is enough)')
   .action(async (id: string) => {
-    const storagePath = join(process.env.FLASHNOTE_HOME ?? homedir(), 'FlashNote')
+    const storagePath = getDefaultStoragePath()
 
     ensureStorageDirectories(storagePath)
     loadConfig(storagePath)
     initStorageService(storagePath)
 
     // Support partial ID matching
-    const { getNotes } = await import('@services/storage.service')
     const { notes } = await getNotes({ sortBy: 'createdAt', sortOrder: 'desc', limit: 200, offset: 0 })
     const match = notes.find((n) => n.id.startsWith(id))
     if (!match) {

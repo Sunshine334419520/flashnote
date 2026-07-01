@@ -1,7 +1,5 @@
 import { Command } from 'commander'
-import { homedir } from 'os'
-import { join } from 'path'
-import { ensureStorageDirectories } from '@utils/paths'
+import { ensureStorageDirectories, getDefaultStoragePath } from '@utils/paths'
 import { loadConfig } from '@services/config.service'
 import { initStorageService, getNotes } from '@services/storage.service'
 
@@ -10,7 +8,7 @@ export const searchCommand = new Command('search')
   .argument('<query...>', 'Search keyword or phrase')
   .action(async (queryParts: string[]) => {
     const query = queryParts.join(' ')
-    const storagePath = join(process.env.FLASHNOTE_HOME ?? homedir(), 'FlashNote')
+    const storagePath = getDefaultStoragePath()
 
     ensureStorageDirectories(storagePath)
     loadConfig(storagePath)
