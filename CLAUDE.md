@@ -167,7 +167,11 @@ pnpm test:watch                                     # Watch mode
 
 ## Outstanding Work
 
-- **@ append mechanism**: Not yet implemented. Design: `@topic` in input → AI appends to existing note. Currently each capture creates a new note.
-- **Old note content backfill**: Notes created before migration v4 have empty content in SQLite. Need to read .md files and backfill.
-- **Desktop UI polish**: Card wall is functional but needs visual refinement (ErrorBoundary shows for some edge cases).
-- **/commands**: `/find`, `/show`, `/edit` etc. not implemented. Only search via search bar works.
+See `docs/audit-2025-06-30.md` for the full audit (50 items). Key categories:
+
+- **6 Bugs**: WINDOW_SHOW_MAIN misrouted, BookmarkCard Open broken, CLI capture no error handling, duplicate 'sk-' prefix, show.ts duplicate import, alert() for test results
+- **11 Incomplete features**: @ append mechanism, content backfill, theme switching, general settings UI, content editing, new-note button, CLI delete/edit/config commands, card click action, delete confirmation
+- **7 IPC issues**: Unused channels, un-broadcasted events, missing safeHandler wrappers, missing preload methods
+- **12 Dead code**: AppShell, Sidebar, NoteListPanel, NoteCard, NoteDetailPanel, NoteContent, unused path functions, unused close functions, unused store methods
+- **4 Test gaps**: Zero desktop UI tests, boundary cases, AI provider tests
+- **10 Tech debt**: Cache no TTL, log rotation, CardWall no virtualization, N+1 tag queries, cross-dependency, path alias inconsistency, missing auto-update, CLI boilerplate, process.exit issues
