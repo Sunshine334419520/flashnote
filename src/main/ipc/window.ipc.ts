@@ -5,6 +5,7 @@ interface WindowCallbacks {
   showQuickCaptureWindow: () => void
   hideQuickCaptureWindow: () => void
   showSettingsWindow: () => void
+  showMainWindow: () => void
 }
 
 export function registerWindowIpc(callbacks: WindowCallbacks): void {
@@ -17,6 +18,6 @@ export function registerWindowIpc(callbacks: WindowCallbacks): void {
   })
 
   ipcMain.handle(IPC_CHANNELS.WINDOW_SHOW_MAIN, () => {
-    callbacks.showSettingsWindow()
+    callbacks.showMainWindow()
   })
 }

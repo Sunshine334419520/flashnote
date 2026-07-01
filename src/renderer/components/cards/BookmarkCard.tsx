@@ -9,8 +9,7 @@ export function BookmarkCard({ note }: Props): ReactElement {
   const domain = (note.typedData as Record<string, string>)?.domain ?? ''
 
   const handleOpen = () => {
-    // Use shell.openExternal via IPC... but for now, just copy
-    navigator.clipboard.writeText(url)
+    void window.electronAPI.shell.openExternal(url)
   }
 
   const handleCopyLink = () => navigator.clipboard.writeText(url)

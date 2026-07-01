@@ -3,6 +3,7 @@ import type { AIProviderConfig } from '../../../shared/types'
 import { ProviderCard } from './ProviderCard'
 import { ProviderForm } from './ProviderForm'
 import { Plus, Server } from 'lucide-react'
+import { cn } from '../../lib/cn'
 
 export function AIProviderSettings(): ReactElement {
   const [providers, setProviders] = useState<AIProviderConfig[]>([])
@@ -10,6 +11,7 @@ export function AIProviderSettings(): ReactElement {
   const [showForm, setShowForm] = useState(false)
   const [editingProvider, setEditingProvider] = useState<AIProviderConfig | null>(null)
   const [testingId, setTestingId] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
   const fetchProviders = useCallback(async () => {
     try {
@@ -80,17 +82,29 @@ export function AIProviderSettings(): ReactElement {
   const handleTest = useCallback(
     async (id: string) => {
       setTestingId(id)
+      setTestResult(null)
       try {
         const ok = await window.electronAPI.ai.providers.test(id)
-        alert(ok ? 'Connection successful!' : 'Connection failed — check your API key and network.')
+        setTestResult(
+          ok
+            ? { ok: true, msg: 'Connection successful!' }
+            : { ok: false, msg: 'Connection failed — check your API key and network.' }
+        )
       } catch (err) {
-        alert('Connection error: ' + (err as Error).message)
+        setTestResult({ ok: false, msg: 'Connection error: ' + (err as Error).message })
       } finally {
         setTestingId(null)
       }
     },
     []
   )
+
+  // Auto-dismiss the test result banner after 3s
+  useEffect(() => {
+    if (!testResult) return
+    const timer = setTimeout(() => setTestResult(null), 3000)
+    return () => clearTimeout(timer)
+  }, [testResult])
 
   if (isLoading) {
     return (
@@ -120,6 +134,21 @@ export function AIProviderSettings(): ReactElement {
           Add Provider
         </button>
       </div>
+
+      {/* Test result banner (replaces blocking alert()) */}
+      {testResult && (
+        <div
+          className={cn(
+            'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm',
+            testResult.ok
+              ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+              : 'bg-red-500/10 text-red-600 dark:text-red-400'
+          )}
+        >
+          <span>{testResult.ok ? '✓' : '✕'}</span>
+          <span>{testResult.msg}</span>
+        </div>
+      )}
 
       {/* Provider cards */}
       {providers.length === 0 ? (

@@ -132,6 +132,19 @@ function showSettingsWindow(): void {
   settingsWindow!.focus()
 }
 
+function showMainWindow(): void {
+  if (mainWindow?.isDestroyed()) {
+    mainWindow = null
+  }
+
+  if (!mainWindow) {
+    createMainWindow()
+  }
+
+  mainWindow!.show()
+  mainWindow!.focus()
+}
+
 function registerGlobalShortcut(hotkey: string): void {
   const registered = globalShortcut.register(hotkey, () => {
     showQuickCaptureWindow()
@@ -267,7 +280,8 @@ app.whenReady().then(() => {
     taskManager,
     showQuickCaptureWindow,
     hideQuickCaptureWindow,
-    showSettingsWindow
+    showSettingsWindow,
+    showMainWindow
   })
 
   createMainWindow()

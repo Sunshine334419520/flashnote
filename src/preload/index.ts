@@ -73,7 +73,14 @@ const electronAPI = {
     showQuickCapture: (): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.WINDOW_SHOW_QUICK_CAPTURE),
     hideQuickCapture: (): Promise<void> =>
-      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_HIDE_QUICK_CAPTURE)
+      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_HIDE_QUICK_CAPTURE),
+    showMain: (): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_SHOW_MAIN)
+  },
+
+  shell: {
+    openExternal: (url: string): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, url)
   },
 
   // Event subscriptions (main → renderer push)
