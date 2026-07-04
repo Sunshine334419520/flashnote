@@ -1,0 +1,327 @@
+import { type ReactElement, type ChangeEvent, useState, useRef, useCallback, useEffect } from 'react'
+import { useNoteStore } from '../../stores/noteStore'
+import { Search, CornerDownLeft } from 'lucide-react'
+import type { Note } from '../../../shared/types'
+
+// ── / command definitions ──────────────────────────────────────────────
+
+interface CommandDef {
+  name: string
+  alias: string
+  label: string
+}
+
+const COMMANDS: CommandDef[] = [
+  { name: '/search', alias: '/s', label: '搜索笔记' },
+  { name: '/add', alias: '/a', label: '创建笔记' },
+  { name: '/delete', alias: '/d', label: '删除笔记' },
+  { name: '/edit', alias: '/e', label: '编辑笔记' },
+]
+
+export interface AICommand {
+  type: 'search' | 'add' | 'delete' | 'edit'
+  raw: string
+  explicit: boolean
+}
+
+// ── Props ──────────────────────────────────────────────────────────────
+
+interface Props {
+  mode: 'local' | 'ai'
+  value: string
+  onChange: (value: string) => void
+  notes?: Note[]
+  onCommit?: (cmd: AICommand) => void
+}
+
+// ── Component ──────────────────────────────────────────────────────────
+
+export function CommandInput({ mode, value, onChange, notes: externalNotes, onCommit }: Props): ReactElement {
+  // Dropdown state: null = none, 'at' = @ mention, 'slash' = / command
+  const [dropdown, setDropdown] = useState<'at' | 'slash' | null>(null)
+  const [filter, setFilter] = useState('')
+  const [highlightedIdx, setHighlightedIdx] = useState(0)
+  const [hint, setHint] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  const storeNotes = useNoteStore((s) => s.notes)
+  const fetchNotes = useNoteStore((s) => s.fetchNotes)
+  const setActiveCategory = useNoteStore((s) => s.setActiveCategory)
+
+  const notes = (externalNotes ?? storeNotes) as Note[]
+  const isAiMode = mode === 'ai' || value.startsWith('/')
+
+  // ── Suggestions ──────────────────────────────────────────────────
+
+  const atSuggestions = getAtSuggestions(notes, filter)
+  const slashCommands = filterCommands(filter)
+
+  const suggestions = dropdown === 'at' ? atSuggestions : dropdown === 'slash' ? slashCommands : []
+
+  // ── Scroll highlighted into view ──────────────────────────────────
+
+  useEffect(() => {
+    if (dropdown && itemRefs.current[highlightedIdx]) {
+      itemRefs.current[highlightedIdx]?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [highlightedIdx, dropdown])
+
+  // ── Reset helpers ─────────────────────────────────────────────────
+
+  const resetDropdown = useCallback(() => {
+    setDropdown(null)
+    setHighlightedIdx(0)
+    setFilter('')
+  }, [])
+
+  // ── Input change ─────────────────────────────────────────────────
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value
+    onChange(v)
+
+    // / trigger
+    const slashMatch = v.match(/^\/(\S*)$/)
+    if (slashMatch) {
+      setFilter(slashMatch[1])
+      setDropdown('slash')
+      setHighlightedIdx(0)
+      setHint(null)
+      return
+    }
+
+    // @ trigger (only when NOT preceded by /command)
+    if (!v.match(/^\/\S+\s/)) {
+      const atMatch = v.match(/@(\S*)$/)
+      if (atMatch) {
+        setFilter(atMatch[1])
+        setDropdown('at')
+        setHighlightedIdx(0)
+        setHint(null)
+        return
+      }
+    }
+
+    resetDropdown()
+    updateHint(v)
+  }
+
+  // ── Select item ──────────────────────────────────────────────────
+
+  const handleSelectAt = (item: string) => {
+    const newValue = value.replace(/@\S*$/, `@${item} `)
+    onChange(newValue)
+    resetDropdown()
+    setHint(null)
+
+    const categories = new Set(notes.map((n) => n.category))
+    if (categories.has(item)) {
+      setActiveCategory(item)
+    }
+
+    inputRef.current?.focus()
+  }
+
+  const handleSelectSlash = (cmd: CommandDef) => {
+    // Replace the leading /... with the full command name + space
+    const newValue = value.replace(/^\/\S*/, `${cmd.name} `)
+    onChange(newValue)
+    resetDropdown()
+    setHint(null)
+    inputRef.current?.focus()
+  }
+
+  // ── Keyboard ─────────────────────────────────────────────────────
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Dropdown open: arrow keys + enter
+    if (dropdown && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setHighlightedIdx((prev) => (prev + 1) % suggestions.length)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setHighlightedIdx((prev) => (prev - 1 + suggestions.length) % suggestions.length)
+        return
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        if (dropdown === 'at') {
+          handleSelectAt(suggestions[highlightedIdx] as string)
+        } else {
+          handleSelectSlash(slashCommands[highlightedIdx])
+        }
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        resetDropdown()
+        setHint(null)
+        return
+      }
+      return
+    }
+
+    // No dropdown — Enter behavior
+    if (e.key === 'Enter') {
+      const trimmed = value.trim()
+      if (!trimmed) return
+
+      if (trimmed.startsWith('/')) {
+        // AI mode — extract type from command
+        const cmd = parseCommand(trimmed)
+        if (cmd && onCommit) {
+          onCommit(cmd)
+          setHint('AI 处理中...')
+        }
+      } else if (trimmed.includes(' ')) {
+        // Natural language → AI search
+        setHint('AI 搜索中...')
+        fetchNotes({ text: trimmed })
+      }
+      // single keyword — already handled by live filter, no action needed
+    }
+
+    if (e.key === 'Escape') {
+      resetDropdown()
+      setHint(null)
+    }
+  }
+
+  // ── Hint ─────────────────────────────────────────────────────────
+
+  const updateHint = (v: string) => {
+    if (v.startsWith('/') && v.includes(' ') && v.length > 3) {
+      setHint('AI 模式 — Enter 执行')
+    } else if (v.includes(' ') && v.length > 5) {
+      setHint('按 Enter 使用 AI 搜索')
+    } else if (v.length > 0 && !v.includes(' ')) {
+      setHint('实时过滤中...')
+    } else {
+      setHint(null)
+    }
+  }
+
+  const handleFocus = () => updateHint(value)
+
+  // ── Render ───────────────────────────────────────────────────────
+
+  return (
+    <div className="relative w-full max-w-2xl mx-auto">
+      <div className="relative rounded-xl border border-border bg-card glow-amber">
+        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
+          onBlur={() => setHint(null)}
+          placeholder={
+            mode === 'ai'
+              ? '输入搜索、创建，或使用 / 命令...'
+              : '搜索笔记、输入指令或直接记录...'
+          }
+          className="w-full bg-transparent pl-10 pr-16 py-3 text-sm outline-none placeholder:text-muted-foreground/35"
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          {hint && (
+            <span className="text-[10px] text-muted-foreground/50 hidden sm:inline">{hint}</span>
+          )}
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/50 font-mono">
+            <CornerDownLeft size={10} />
+          </kbd>
+        </div>
+      </div>
+
+      {/* Hint bar */}
+      <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-muted-foreground/35">
+        <span>输入关键词实时过滤</span>
+        <span>·</span>
+        <span>输入完整句子 + Enter = AI 搜索</span>
+        <span>·</span>
+        <span>@ 分类筛选</span>
+        <span>·</span>
+        <span>/ AI 命令</span>
+      </div>
+
+      {/* Dropdown (shared for @ and /) */}
+      {dropdown && suggestions.length > 0 && (
+        <div ref={menuRef} className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl border border-border shadow-lg z-50 max-h-56 overflow-y-auto py-1">
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              ref={(el) => { itemRefs.current[i] = el }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                if (dropdown === 'at') handleSelectAt(s as string)
+                else handleSelectSlash(s as CommandDef)
+              }}
+              onMouseEnter={() => setHighlightedIdx(i)}
+              className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2 ${
+                i === highlightedIdx ? 'bg-muted' : 'hover:bg-muted/50'
+              }`}
+            >
+              {dropdown === 'slash' ? (
+                <>
+                  <span className="text-[11px] text-muted-foreground shrink-0 w-5">/</span>
+                  <span className="font-medium shrink-0">{(s as CommandDef).name}</span>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{(s as CommandDef).alias}</span>
+                  <span className="text-[11px] text-muted-foreground/60 ml-auto">{(s as CommandDef).label}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    {(s as string).length > 20 ? '📝' : '📁'}
+                  </span>
+                  <span className="truncate">{s as string}</span>
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
+
+function getAtSuggestions(notes: { category: string; title: string }[], filter: string): string[] {
+  const items = new Set<string>()
+  for (const n of notes) {
+    items.add(n.category)
+    if (n.title.length <= 20) items.add(n.title)
+  }
+  const filtered = Array.from(items).filter((i) => i.toLowerCase().includes(filter.toLowerCase()))
+  return filtered.slice(0, 8)
+}
+
+function filterCommands(filter: string): CommandDef[] {
+  if (!filter) return COMMANDS
+  const f = filter.toLowerCase()
+  return COMMANDS.filter(
+    (c) => c.name.includes(f) || c.alias.includes(f)
+  )
+}
+
+function parseCommand(trimmed: string): AICommand | null {
+  // Extract command type from /xxx
+  const match = trimmed.match(/^\/(\S+)\s+(.+)/)
+  if (!match) return null
+
+  const cmd = match[1].toLowerCase()
+  const raw = match[2]
+
+  if (cmd === 'search' || cmd === 's') return { type: 'search', raw, explicit: true }
+  if (cmd === 'add' || cmd === 'a') return { type: 'add', raw, explicit: true }
+  if (cmd === 'delete' || cmd === 'd') return { type: 'delete', raw, explicit: true }
+  if (cmd === 'edit' || cmd === 'e') return { type: 'edit', raw, explicit: true }
+
+  return null
+}

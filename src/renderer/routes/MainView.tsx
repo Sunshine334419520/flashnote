@@ -3,7 +3,8 @@ import { useNoteStore } from '../stores/noteStore'
 import { useTaskStore } from '../stores/taskStore'
 import { Settings } from 'lucide-react'
 import { CardWall } from '../components/cards/CardWall'
-import { SearchBar } from '../components/search/SearchBar'
+import { CommandInput } from '../components/command/CommandInput'
+import type { AICommand } from '../components/command/CommandInput'
 import { TaskBar } from '../components/task/TaskBar'
 import type { Note, TaskInfo } from '../../shared/types'
 import { mockNotes } from '../data/mockNotes'
@@ -57,16 +58,47 @@ export function MainView(): ReactElement {
     setNotes((prev) => prev.filter((n) => n.id !== id))
   }, [])
 
+  const handleAICommand = useCallback((cmd: AICommand) => {
+    if (cmd.type === 'search') {
+      // AI search: set search query to trigger fetchNotes
+      setSearchQuery(cmd.raw)
+      // TODO: send to AI service for semantic search
+    } else if (cmd.type === 'add') {
+      // AI create: treat as if user typed it for capture
+      const newNote: Note = {
+        id: `mock-${Date.now()}`,
+        type: 'text',
+        title: cmd.raw.length > 50 ? cmd.raw.slice(0, 50) + '...' : cmd.raw,
+        content: cmd.raw,
+        category: 'Notes',
+        tags: [],
+        sensitive: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isClassified: false,
+        isManuallyEdited: false,
+        status: 'published',
+        metadata: {},
+      }
+      setNotes((prev) => [newNote, ...prev])
+    } else if (cmd.type === 'delete' || cmd.type === 'edit') {
+      // TODO: send to AI to locate target note, then execute
+      console.log(`AI ${cmd.type}: "${cmd.raw}" (not yet implemented)`)
+    }
+  }, [setSearchQuery])
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* AI Command Bar — draggable region on macOS hiddenInset */}
       <div className="shrink-0 px-24 pt-10 pb-3 drag-region">
         <div className="no-drag flex items-start gap-3">
           <div className="flex-1">
-            <SearchBar
+            <CommandInput
+              mode="local"
               value={searchQuery}
               onChange={setSearchQuery}
               notes={USE_MOCK ? notes : undefined}
+              onCommit={handleAICommand}
             />
           </div>
           <button
