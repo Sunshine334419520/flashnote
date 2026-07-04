@@ -26,10 +26,27 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void } {
         : 'system') as Theme
       setThemeState(t)
       applyTheme(t)
+      localStorage.setItem('flashnote-theme', t)
     }).catch(() => {
       // settings not available (mock mode) — use system default
       applyTheme('system')
     })
+  }, [])
+
+  // Listen for cross-window settings changes
+  useEffect(() => {
+    const unsub = window.electronAPI.on('event:settings-changed', (data: unknown) => {
+      const d = data as { key: string; value: unknown }
+      if (d.key === 'theme') {
+        const t = (typeof d.value === 'string' && ['light', 'dark', 'system'].includes(d.value)
+          ? d.value
+          : 'system') as Theme
+        setThemeState(t)
+        applyTheme(t)
+        localStorage.setItem('flashnote-theme', t)
+      }
+    })
+    return unsub
   }, [])
 
   // Listen for OS theme changes (for 'system' mode)
@@ -45,6 +62,7 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void } {
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t)
     applyTheme(t)
+    localStorage.setItem('flashnote-theme', t)
     window.electronAPI.settings.set('theme', t).catch(() => {})
   }, [])
 

@@ -239,7 +239,7 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
       </div>
 
       {/* Hint bar */}
-      <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-muted-foreground/35">
+      <div className="flex items-center gap-1.5 mt-2 pl-[6px] text-[10px] text-muted-foreground/35">
         <span>输入关键词实时过滤</span>
         <span>·</span>
         <span>@ 分类筛选</span>
