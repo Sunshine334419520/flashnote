@@ -90,7 +90,7 @@ export function MainView(): ReactElement {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* AI Command Bar — draggable region on macOS hiddenInset */}
-      <div className="shrink-0 px-24 pt-10 pb-3 drag-region">
+      <div className="shrink-0 px-24 pt-[46px] pb-3 drag-region">
         <div className="no-drag flex items-start gap-3">
           <div className="flex-1">
             <CommandInput
