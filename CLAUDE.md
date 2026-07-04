@@ -132,6 +132,17 @@ try {
 | Bookmark | `217 91% 60%` | `#3B82F6` |
 | Text | `258 90% 65%` | `#8B5CF6` |
 
+## I18n
+
+- Renderer only (CLI stays English). Two languages: `zh-CN` (default), `en`.
+- Translation files: `src/renderer/i18n/zh-CN.ts` and `en.ts`. Flat key-value, no nesting.
+- Hook: `import { useT } from '../i18n'` → `const { t } = useT()` → `t('card.copy')`.
+- Parameters: `t('time.minutesAgo', { n: 5 })` → `"5分钟前"` / `"5m ago"`.
+- Time formatting: use `useFormatTime()` hook instead of a local `formatRelativeTime`.
+- Key naming: `category.thing` — e.g. `card.copy`, `search.placeholder`, `type.apikey`.
+- New key: add to `zh-CN.ts` first (it defines the `Translations` type), then `en.ts`.
+- Language persists in `config.json` → `language` field. Settings UI has a `LanguageSelector`.
+
 ## Git Convention
 
 `<type>: <subject>` — English, imperative, no period, ≤ 72 chars.
