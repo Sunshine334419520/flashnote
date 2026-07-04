@@ -31,10 +31,10 @@ function windowFrameOptions(): { frame?: boolean; titleBarStyle?: 'hiddenInset' 
 
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 800,
-    minHeight: 500,
+    width: 780,
+    height: 690,
+    minWidth: 680,
+    minHeight: 420,
     ...windowFrameOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

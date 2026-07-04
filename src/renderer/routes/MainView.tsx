@@ -1,27 +1,36 @@
-import { type ReactElement, useEffect } from 'react'
+import { type ReactElement, useEffect, useState, useCallback } from 'react'
 import { useNoteStore } from '../stores/noteStore'
 import { useTaskStore } from '../stores/taskStore'
+import { Settings } from 'lucide-react'
 import { CardWall } from '../components/cards/CardWall'
 import { SearchBar } from '../components/search/SearchBar'
-import { CategoryList } from '../components/categories/CategoryList'
 import { TaskBar } from '../components/task/TaskBar'
 import type { Note, TaskInfo } from '../../shared/types'
+import { mockNotes } from '../data/mockNotes'
+
+/** Toggle this to switch between mock data and real store data */
+const USE_MOCK = true
 
 export function MainView(): ReactElement {
   const fetchNotes = useNoteStore((s) => s.fetchNotes)
   const searchQuery = useNoteStore((s) => s.searchQuery)
   const setSearchQuery = useNoteStore((s) => s.setSearchQuery)
-  const activeCategory = useNoteStore((s) => s.activeCategory)
-  const setActiveCategory = useNoteStore((s) => s.setActiveCategory)
   const addTask = useTaskStore((s) => s.addTask)
   const updateTask = useTaskStore((s) => s.updateTask)
   const fetchTasks = useTaskStore((s) => s.fetchTasks)
 
+  // Mock data state (for demo: CRUD on local notes array)
+  const [notes, setNotes] = useState<Note[]>(mockNotes)
+
+  // Fetch real data on mount (for when mock is disabled)
   useEffect(() => {
-    fetchNotes()
-    fetchTasks()
+    if (!USE_MOCK) {
+      fetchNotes()
+      fetchTasks()
+    }
   }, [])
 
+  // Real-time IPC events
   useEffect(() => {
     const c1 = window.electronAPI.on('event:note-created', (n: unknown) => {
       if ((n as Note).status === 'published') fetchNotes()
@@ -33,29 +42,53 @@ export function MainView(): ReactElement {
     return () => { c1(); c2(); c3(); c4(); c5() }
   }, [fetchNotes, addTask, updateTask])
 
+  // ---- Mock CRUD handlers ----
+  const handleUpdate = useCallback((id: string, title: string, content: string) => {
+    setNotes((prev) =>
+      prev.map((n) =>
+        n.id === id
+          ? { ...n, title, content, updatedAt: new Date().toISOString(), isManuallyEdited: true }
+          : n
+      )
+    )
+  }, [])
+
+  const handleDelete = useCallback((id: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id))
+  }, [])
+
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Top bar: search + quick capture hint */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border">
-        <div className="flex-1 max-w-xl">
-          <SearchBar value={searchQuery} onChange={setSearchQuery} />
+      {/* AI Command Bar — draggable region on macOS hiddenInset */}
+      <div className="shrink-0 px-24 pt-10 pb-3 drag-region">
+        <div className="no-drag flex items-start gap-3">
+          <div className="flex-1">
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              notes={USE_MOCK ? notes : undefined}
+            />
+          </div>
+          <button
+            onClick={() => window.electronAPI.window.showSettings()}
+            className="shrink-0 mt-1 p-2 rounded-xl text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
+            title="Settings"
+          >
+            <Settings size={16} />
+          </button>
         </div>
-        <span className="text-[11px] text-muted-foreground/50 hidden sm:inline">
-          Alt+Space to capture
-        </span>
       </div>
 
-      {/* Content: sidebar + card wall */}
-      <div className="flex-1 flex overflow-hidden">
-        <aside className="w-48 shrink-0 border-r border-border bg-card/30 overflow-y-auto px-2 py-3">
-          <CategoryList activeCategory={activeCategory} onSelect={setActiveCategory} />
-        </aside>
-        <main className="flex-1 overflow-y-auto">
-          <CardWall />
-        </main>
+      {/* Card canvas */}
+      <div className="flex-1 overflow-y-auto">
+        <CardWall
+          notes={USE_MOCK ? notes : undefined}
+          onUpdate={USE_MOCK ? handleUpdate : undefined}
+          onDelete={USE_MOCK ? handleDelete : undefined}
+        />
       </div>
 
-      {/* Bottom task bar */}
+      {/* Status bar */}
       <TaskBar />
     </div>
   )

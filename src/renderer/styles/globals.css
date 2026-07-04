@@ -21,10 +21,18 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  /* Card type stripe colors — usable as bg-type-apikey, border-type-command, etc. */
+  --color-type-apikey: hsl(var(--type-apikey));
+  --color-type-command: hsl(var(--type-command));
+  --color-type-credential: hsl(var(--type-credential));
+  --color-type-bookmark: hsl(var(--type-bookmark));
+  --color-type-text: hsl(var(--type-text));
+
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
+  --radius-2xl: 1rem;
 }
 
 @layer base {
@@ -48,5 +56,49 @@
       Roboto,
       'Helvetica Neue',
       sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}
+
+/* Window drag region (macOS hiddenInset titlebar) */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Card hover lift animation */
+.card-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px hsl(var(--foreground) / 0.06);
+}
+
+/* AI command bar glow on focus */
+.glow-amber {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.glow-amber:focus-within {
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15), 0 0 20px hsl(var(--primary) / 0.08);
+  border-color: hsl(var(--primary) / 0.4);
 }

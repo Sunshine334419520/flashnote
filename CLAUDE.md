@@ -145,6 +145,32 @@ User input: "sk-xxx 我的deepseek api key"
 - **Content stored in SQLite + Markdown**: SQLite has the content (up to 2000 chars for preview). .md files are the full source of truth.
 - **API keys stored in plaintext**: Local desktop app. Same approach as Claude Code.
 
+## Color Palette (v2 UI)
+
+### Theme Tokens (Light)
+
+| Token | HSL Value | Usage |
+|-------|-----------|-------|
+| `--background` | `60 9% 98%` | Page (warm stone 50) |
+| `--foreground` | `24 10% 10%` | Text (stone 900) |
+| `--card` | `0 0% 100%` | Card background |
+| `--primary` | `33 95% 53%` | Accent (amber 600) |
+| `--primary-foreground` | `0 0% 100%` | Text on accent |
+| `--muted` | `60 5% 96%` | Subtle bg (stone 100) |
+| `--muted-foreground` | `25 5% 45%` | Secondary text (stone 500) |
+| `--border` | `24 6% 89%` | Borders (stone 200) |
+| `--ring` | `33 95% 53%` | Focus ring |
+
+### Card Type Colors (left stripe)
+
+| Type | HSL | Hex |
+|------|-----|-----|
+| API Key | `38 92% 50%` | `#F59E0B` |
+| Command | `160 84% 39%` | `#10B981` |
+| Credential | `0 84% 60%` | `#EF4444` |
+| Bookmark | `217 91% 60%` | `#3B82F6` |
+| Text | `258 90% 65%` | `#8B5CF6` |
+
 ## Testing
 
 ### 54 tests (5 files)

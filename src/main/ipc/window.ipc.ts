@@ -20,4 +20,8 @@ export function registerWindowIpc(callbacks: WindowCallbacks): void {
   ipcMain.handle(IPC_CHANNELS.WINDOW_SHOW_MAIN, () => {
     callbacks.showMainWindow()
   })
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_SHOW_SETTINGS, () => {
+    callbacks.showSettingsWindow()
+  })
 }

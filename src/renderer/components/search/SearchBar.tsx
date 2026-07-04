@@ -1,79 +1,184 @@
-import { type ReactElement, type ChangeEvent, useState, useRef, useEffect, useCallback } from 'react'
+import { type ReactElement, type ChangeEvent, useState, useRef, useCallback, useEffect } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
-import { Search } from 'lucide-react'
+import { Search, CornerDownLeft } from 'lucide-react'
+import type { Note } from '../../../shared/types'
 
 interface SearchBarProps {
   value: string
   onChange: (value: string) => void
+  notes?: Note[]
 }
 
-export function SearchBar({ value, onChange }: SearchBarProps): ReactElement {
+export function SearchBar({ value, onChange, notes: externalNotes }: SearchBarProps): ReactElement {
   const [showAtMenu, setShowAtMenu] = useState(false)
   const [atFilter, setAtFilter] = useState('')
+  const [highlightedIdx, setHighlightedIdx] = useState(0)
+  const [hint, setHint] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const notes = useNoteStore((s) => s.notes)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const storeNotes = useNoteStore((s) => s.notes)
   const fetchNotes = useNoteStore((s) => s.fetchNotes)
+  const setActiveCategory = useNoteStore((s) => s.setActiveCategory)
 
-  // Build @ suggestions from categories + note titles
+  const notes = (externalNotes ?? storeNotes) as Note[]
+
   const suggestions = getAtSuggestions(notes, atFilter)
+
+  // Auto-scroll highlighted item into view
+  useEffect(() => {
+    if (showAtMenu && itemRefs.current[highlightedIdx]) {
+      itemRefs.current[highlightedIdx]?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [highlightedIdx, showAtMenu])
+
+  const resetMenu = useCallback(() => {
+    setShowAtMenu(false)
+    setHighlightedIdx(0)
+  }, [])
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value
     onChange(v)
 
-    // Check for @ trigger
     const atMatch = v.match(/@(\S*)$/)
     if (atMatch) {
       setAtFilter(atMatch[1])
       setShowAtMenu(true)
+      setHighlightedIdx(0)
+      setHint(null)
     } else {
-      setShowAtMenu(false)
+      resetMenu()
+    }
+
+    if (v.includes(' ') && v.length > 5) {
+      setHint('按 Enter 使用 AI 搜索')
+    } else if (v.length > 0 && !v.includes(' ')) {
+      setHint('实时过滤中...')
+    } else {
+      setHint(null)
     }
   }
 
   const handleSelectAt = (item: string) => {
+    // Replace the @query with the selected item + space
     const newValue = value.replace(/@\S*$/, `@${item} `)
     onChange(newValue)
-    setShowAtMenu(false)
+    resetMenu()
+    setHint(null)
+
+    // If it's a category, activate the category filter
+    const categories = new Set(notes.map((n) => n.category))
+    if (categories.has(item)) {
+      setActiveCategory(item)
+    }
+
     inputRef.current?.focus()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (showAtMenu && suggestions.length > 0) {
+      // Arrow down → next item
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setHighlightedIdx((prev) => (prev + 1) % suggestions.length)
+        return
+      }
+      // Arrow up → previous item
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setHighlightedIdx((prev) => (prev - 1 + suggestions.length) % suggestions.length)
+        return
+      }
+      // Enter → select highlighted
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleSelectAt(suggestions[highlightedIdx])
+        return
+      }
+      // Escape → close menu
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        resetMenu()
+        setHint(null)
+        return
+      }
+      return
+    }
+
+    // No menu open
     if (e.key === 'Enter') {
       const trimmed = value.trim()
       if (!trimmed) return
-      // Full sentence → AI search
       if (trimmed.includes(' ')) {
+        setHint('AI 搜索中...')
         fetchNotes({ text: trimmed })
       }
-      // Short keyword → already handled by local filter in CardWall
     }
-    if (e.key === 'Escape') setShowAtMenu(false)
+    if (e.key === 'Escape') {
+      resetMenu()
+      setHint(null)
+    }
+  }
+
+  const handleFocus = () => {
+    if (value.trim().length > 0) {
+      if (value.includes(' ') && value.length > 5) setHint('按 Enter 使用 AI 搜索')
+      else if (!value.includes(' ')) setHint('实时过滤中...')
+    }
   }
 
   return (
-    <div className="relative">
-      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 pointer-events-none" />
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Search notes or ask AI..."
-        className="w-full bg-muted/50 rounded-xl pl-9 pr-3 py-2 text-sm outline-none border border-transparent focus:border-primary/20 focus:bg-muted transition-all placeholder:text-muted-foreground/50"
-      />
+    <div className="relative w-full max-w-2xl mx-auto">
+      <div className="relative rounded-xl border border-border bg-card glow-amber">
+        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
+          onBlur={() => setHint(null)}
+          placeholder="搜索笔记、输入指令或直接记录..."
+          className="w-full bg-transparent pl-10 pr-16 py-3 text-sm outline-none placeholder:text-muted-foreground/35"
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          {hint && (
+            <span className="text-[10px] text-muted-foreground/50 hidden sm:inline">{hint}</span>
+          )}
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/50 font-mono">
+            <CornerDownLeft size={10} />
+          </kbd>
+        </div>
+      </div>
+
+      {/* Hint bar */}
+      <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-muted-foreground/35">
+        <span>输入关键词实时过滤</span>
+        <span>·</span>
+        <span>输入完整句子 + Enter = AI 搜索</span>
+        <span>·</span>
+        <span>@ 分类筛选</span>
+      </div>
 
       {/* @ dropdown */}
       {showAtMenu && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card rounded-xl border shadow-xl z-50 max-h-48 overflow-y-auto">
+        <div ref={menuRef} className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl border border-border shadow-lg z-50 max-h-56 overflow-y-auto py-1">
           {suggestions.map((s, i) => (
             <button
               key={i}
-              onClick={() => handleSelectAt(s)}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
+              ref={(el) => { itemRefs.current[i] = el }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                handleSelectAt(s)
+              }}
+              onMouseEnter={() => setHighlightedIdx(i)}
+              className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2 ${
+                i === highlightedIdx ? 'bg-muted' : 'hover:bg-muted/50'
+              }`}
             >
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[11px] text-muted-foreground shrink-0">
                 {s.length > 20 ? '📝' : '📁'}
               </span>
               <span className="truncate">{s}</span>
@@ -85,7 +190,6 @@ export function SearchBar({ value, onChange }: SearchBarProps): ReactElement {
   )
 }
 
-/** Collect unique categories + note titles for @ suggestions */
 function getAtSuggestions(notes: { category: string; title: string }[], filter: string): string[] {
   const items = new Set<string>()
   for (const n of notes) {

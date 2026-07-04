@@ -33,6 +33,7 @@ export const IPC_CHANNELS = {
   WINDOW_SHOW_QUICK_CAPTURE: 'window:show-quick-capture',
   WINDOW_HIDE_QUICK_CAPTURE: 'window:hide-quick-capture',
   WINDOW_SHOW_MAIN: 'window:show-main',
+  WINDOW_SHOW_SETTINGS: 'window:show-settings',
 
   // Shell (renderer → main, privileged operations)
   SHELL_OPEN_EXTERNAL: 'shell:open-external',

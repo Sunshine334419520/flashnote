@@ -75,7 +75,9 @@ const electronAPI = {
     hideQuickCapture: (): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.WINDOW_HIDE_QUICK_CAPTURE),
     showMain: (): Promise<void> =>
-      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_SHOW_MAIN)
+      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_SHOW_MAIN),
+    showSettings: (): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.WINDOW_SHOW_SETTINGS)
   },
 
   shell: {

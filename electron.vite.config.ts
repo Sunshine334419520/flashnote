@@ -27,6 +27,9 @@ export default defineConfig({
         '@renderer': resolve('src/renderer')
       }
     },
-    plugins: [react(), tailwindcss()]
+    plugins: [react(), tailwindcss()],
+    define: {
+      'process.platform': JSON.stringify(process.platform)
+    }
   }
 })
