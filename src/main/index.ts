@@ -1,5 +1,7 @@
-import { app, BrowserWindow, globalShortcut, Tray, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, globalShortcut, Tray, Menu, nativeImage, nativeTheme } from 'electron'
 import { join } from 'path'
+import { readFileSync } from 'fs'
+import { homedir } from 'os'
 import { registerAllIpcHandlers } from './ipc'
 import { getDefaultStoragePath, ensureStorageDirectories } from './utils/paths'
 import { loadConfig } from './services/config.service'
@@ -15,6 +17,29 @@ let settingsWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 
 const isDev = !app.isPackaged
+
+const DARK_BG = '#141312'
+const LIGHT_BG = '#fafaf9'
+
+/** Read saved theme and return matching window background color. */
+function getThemeBackgroundColor(): string {
+  try {
+    const configPath = join(homedir(), 'FlashNote', 'config.json')
+    const raw = readFileSync(configPath, 'utf-8')
+    const config = JSON.parse(raw) as { theme?: string }
+    const t = config.theme ?? 'system'
+    const sysDark = nativeTheme.shouldUseDarkColors
+    let bg: string
+    if (t === 'dark') bg = DARK_BG
+    else if (t === 'light') bg = LIGHT_BG
+    else bg = sysDark ? DARK_BG : LIGHT_BG
+    logger.info('main:theme', `theme=${t} systemDark=${sysDark} → bg=${bg}`)
+    return bg
+  } catch (err) {
+    logger.warn('main:theme', 'Could not read config', { err: String(err) })
+    return nativeTheme.shouldUseDarkColors ? DARK_BG : LIGHT_BG
+  }
+}
 
 /**
  * Platform-aware window frame options. The renderer has no custom window
@@ -35,6 +60,7 @@ function createMainWindow(): void {
     height: 690,
     minWidth: 680,
     minHeight: 420,
+    backgroundColor: getThemeBackgroundColor(),
     ...windowFrameOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -108,6 +134,7 @@ function createSettingsWindow(): void {
   settingsWindow = new BrowserWindow({
     width: 700,
     height: 560,
+    backgroundColor: getThemeBackgroundColor(),
     ...windowFrameOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

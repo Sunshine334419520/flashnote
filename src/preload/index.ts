@@ -20,12 +20,23 @@ try {
   const raw = readFileSync(configPath, 'utf-8')
   const config = JSON.parse(raw) as { theme?: string }
   const t = config.theme ?? 'system'
-  if (t === 'dark') {
+  const shouldBeDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+  // Log for debugging — check terminal output
+  console.log('[preload:theme] configPath:', configPath)
+  console.log('[preload:theme] theme:', t, 'shouldBeDark:', shouldBeDark)
+  console.log('[preload:theme] html.classList before:', document.documentElement.className)
+
+  if (shouldBeDark) {
     document.documentElement.classList.add('dark')
-  } else if (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.classList.add('dark')
+    // Also set inline bg as immediate fallback (before CSS loads)
+    document.documentElement.style.backgroundColor = '#141312'
   }
-} catch { /* config doesn't exist yet — use system default */ }
+
+  console.log('[preload:theme] html.classList after:', document.documentElement.className)
+} catch (err) {
+  console.log('[preload:theme] ERROR:', err)
+}
 
 const electronAPI = {
   notes: {
