@@ -1,167 +1,128 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project
 
-## Project Overview
+FlashNote (闪记) — AI-native note-taking tool. Two interfaces: **CLI** + **Desktop** (Electron). Both share `src/main/services/`.
 
-FlashNote (闪记) is an AI-native note-taking tool. Users type natural language — the AI extracts the payload, classifies it, generates a title and tags, and saves it. Two interfaces: **CLI** (terminal) and **Desktop** (Electron). Both share the same service layer.
-
-## Development Quick Start
+## Quick Commands
 
 ```bash
-pnpm install          # Install dependencies
-pnpm test             # Run all 54 tests (unit + integration)
-pnpm test -- tests/heuristic.test.ts  # Run a single test file
-
-# CLI
-cd cli && pnpm exec tsx --tsconfig cli/tsconfig.json src/index.ts capture "your note"
-cd cli && pnpm exec tsx --tsconfig cli/tsconfig.json src/index.ts list
-cd cli && pnpm exec tsx --tsconfig cli/tsconfig.json src/index.ts search "keyword"
-cd cli && pnpm exec tsx --tsconfig cli/tsconfig.json src/index.ts show <short-id>
-
-# Desktop
-pnpm dev              # Start Electron dev (HMR for renderer)
-pnpm build            # Production build
-pnpm exec tsc --noEmit -p tsconfig.main.json    # Type check main
-pnpm exec tsc --noEmit -p tsconfig.renderer.json
-pnpm exec tsc --noEmit -p tsconfig.preload.json
+pnpm dev              # Electron dev (HMR)
+pnpm test             # vitest (58 tests)
+pnpm build            # production build
+pnpm typecheck        # tsc --noEmit all targets
+pnpm rebuild          # electron-rebuild better-sqlite3
 ```
+
+> Detailed setup instructions are in the `bootstrap-env` skill (run on fresh clones).
 
 ## Tech Stack
 
-- **CLI**: commander + tsx, Node.js, same services as Desktop
-- **Desktop**: Electron + React 19 + TypeScript + electron-vite (Vite)
-- **Frontend**: React 19, Tailwind CSS v4, Zustand
-- **Storage**: better-sqlite3 (WAL, FTS5) + Markdown files (YAML frontmatter)
-- **AI**: Multi-provider — Anthropic SDK + OpenAI-compatible fetch (DeepSeek, Moonshot, Zhipu, custom)
-- **Testing**: vitest (30 unit + 24 integration = 54 total)
-- **Package manager**: pnpm
+**Desktop**: Electron 42 + React 19 + TypeScript + electron-vite (Vite)
+**Frontend**: React 19, Tailwind CSS v4, Zustand, React Router v7 (HashRouter)
+**Storage**: better-sqlite3 (WAL, FTS5) + Markdown files (YAML frontmatter)
+**AI**: Multi-provider — Anthropic SDK + OpenAI-compatible fetch (DeepSeek, Moonshot, Zhipu, custom)
 
 ## Architecture
 
-### Shared Service Layer
-
-`src/main/services/` is shared between CLI and Desktop. No Electron dependencies — all path resolution uses `os.homedir()`.
-
-```
-src/
-├── shared/              # Types, constants, IPC channel registry
-├── main/
-│   ├── services/        # Core business logic (shared: CLI + Desktop)
-│   │   ├── storage.service.ts    # Markdown file I/O + index sync
-│   │   ├── index.service.ts     # SQLite CRUD + FTS5 full-text search
-│   │   ├── ai/
-│   │   │   ├── index.ts         # AIService: provider management + parse
-│   │   │   ├── base.ts          # AIProvider interface + heuristicParse
-│   │   │   ├── anthropic.provider.ts
-│   │   │   ├── openai-compat.provider.ts  # Covers 5 provider types
-│   │   │   ├── prompts.ts       # Smart Parse system prompt
-│   │   │   └── cache.ts         # SHA-256 classification cache (SQLite)
-│   │   ├── config.service.ts    # config.json read/write
-│   │   └── task-manager.ts      # In-memory AI processing task queue
-│   ├── database/        # SQLite connection, migrations (v4 latest)
-│   ├── utils/           # paths, markdown (gray-matter), hash, logger, safeHandler
-│   ├── ipc/             # Electron IPC handlers (DESKTOP ONLY)
-│   ├── preload/         # contextBridge security boundary (DESKTOP ONLY)
-│   └── renderer/        # React UI (DESKTOP ONLY)
-├── cli/                 # CLI tool
-│   └── src/commands/    # capture, list, show, search
-└── tests/               # All tests
-    ├── heuristic.test.ts       # 15 tests — type detection
-    ├── extract-json.test.ts    # 6 tests — JSON parsing
-    ├── markdown.test.ts        # 3 tests — serialization round-trip
-    ├── task-manager.test.ts    # 6 tests — task queue
-    └── cli-integration.test.ts # 24 tests — full CLI flow
-```
-
-### Data Model
-
-```typescript
-type NoteType = 'apikey' | 'credential' | 'command' | 'bookmark' | 'text'
-
-interface Note {
-  id: string; type: NoteType; title: string; content: string
-  category: string; tags: string[]; sensitive: boolean
-  typedData?: Record<string, unknown>  // type-specific structured data
-  status: 'draft' | 'published'
-  // ...timestamps, flags
-}
-
-interface SmartParseResult {
-  cleanedContent: string; type: NoteType; category: string
-  tags: string[]; title: string; sensitive: boolean
-  typedData?: Record<string, unknown>
-  appendToNoteId?: string  // @reference → append to existing note (not yet implemented)
-}
-```
-
-### Storage Layout
-
-```
-~/FlashNote/
-├── notes/{uuid}.md       # Markdown with YAML frontmatter (source of truth)
-├── index.db              # SQLite: notes, tags, note_tags, categories, notes_fts, settings
-├── ai-cache.db           # Parse cache keyed by SHA-256(rawInput)
-├── config.json           # App settings
-└── logs/                 # Daily rotation
-```
-
-### Note Capture Flow
-
-```
-User input: "sk-xxx 我的deepseek api key"
-  │
-  ├── heuristicParse (sync, ms-level) → type=apikey, category=API Keys, sensitive=true
-  │
-  ├── save as draft → write .md file + SQLite index (status='draft')
-  │
-  ├── AI parse (async background) → refine classification, generate title
-  │
-  ├── publish → status='published' → note appears in list/search
-  │
-  └── cleanedContent stored: "sk-xxx" (NOT raw input — meta-commentary discarded)
-```
-
-### Multi-Provider AI
-
-| Provider Type | Implementation | API Format |
-|---|---|---|
-| anthropic | AnthropicProvider (SDK) | Messages API |
-| openai, deepseek, moonshot, zhipu, custom | OpenAICompatibleProvider (fetch) | Chat Completions |
-
-- No openai SDK dependency — uses raw `fetch()` for all OpenAI-compatible APIs
-- DeepSeek thinking mode: `config.thinking = 'enabled'` adds `{"thinking": {"type": "enabled"}}` to request
-- Fallback: if no active provider or API fails → heuristicParse handles it
-- AI cache: SHA-256(rawInput) → skip duplicate API calls
+- `src/shared/` — types, constants, IPC channel registry (shared by all targets)
+- `src/main/services/` — core logic, no Electron deps. Paths use `os.homedir()`
+- `src/main/ipc/` — Electron IPC handlers (Desktop only)
+- `src/preload/` — contextBridge security boundary (Desktop only)
+- `src/renderer/` — React UI (Desktop only)
+- `src/cli/` — CLI commands
+- Renderer never touches Node APIs directly. All I/O goes through IPC `window.electronAPI.*`
 
 ## Key Design Decisions
 
-- **Typed content model**: Notes have a `type` (apikey/credential/command/bookmark/text) that determines card display and primary action
-- **cleanedContent vs rawInput**: Only the extracted payload is stored. "sk-xxx 这是我的key" → stored as "sk-xxx"
-- **AI generates distinct titles**: Same topic (e.g., "OpenAI API Key") → AI adds context ("OpenAI API Key (开发环境)") to differentiate. Notes are NOT merged — each key is its own note with a distinguishable title.
-- **Heuristic first, AI refine**: synchronous heuristicParse gives immediate classification; async AI parse refines it. User never waits.
-- **Draft → Published flow**: Notes start as draft, appear in UI only after AI completes (or immediately if no AI configured). TaskBar shows processing status.
-- **Card wall over file list**: Main UI is a CSS Grid of typed cards (APIKeyCard, CommandCard, etc.), not a file browser.
-- **Content stored in SQLite + Markdown**: SQLite has the content (up to 2000 chars for preview). .md files are the full source of truth.
-- **API keys stored in plaintext**: Local desktop app. Same approach as Claude Code.
+- **Typed content model**: `NoteType = 'apikey' | 'credential' | 'command' | 'bookmark' | 'text'` determines card display and primary action
+- **cleanedContent ≠ rawInput**: Only the extracted payload is stored. "sk-xxx 这是我的key" → stored as "sk-xxx"
+- **Heuristic first, AI refine**: sync heuristicParse classifies immediately; async AI parse refines later
+- **Card wall over file list**: main UI is a typed card grid, not a file browser
+- **API keys in plaintext**: local desktop app, same approach as Claude Code
+- **One command bar for everything**: search, create, edit, delete all through `/` commands and natural language. Shared between MainView and Alt+Space (`docs/design/ai-command-bar.md`)
+
+## Coding Conventions
+
+### Component Style
+
+```ts
+import { type ReactElement, useState } from 'react'
+
+interface Props {
+  note: Note
+  onUpdate?: (id: string, title: string, content: string) => void
+}
+
+export function ComponentName({ note, onUpdate }: Props): ReactElement {
+  // ...
+}
+```
+
+- Named function declarations with explicit `ReactElement` return type. Never `React.FC`.
+- Props: `interface Props` or `interface ComponentNameProps`, defined in the same file above the component.
+- Never `export default`. Always inline named exports.
+
+### File Naming
+
+PascalCase for all component files: `TextCard.tsx`, `SearchBar.tsx`, `CardWall.tsx`.
+
+### Import Order
+
+```
+1. React / React hooks           import { type ReactElement, useState } from 'react'
+2. Store imports                  import { useNoteStore } from '../../stores/noteStore'
+3. Local components               import { CardFactory } from './CardFactory'
+4. Library imports                import { FileText } from 'lucide-react'
+5. Shared types (type-only)       import type { Note } from '../../../shared/types'
+6. Local utilities / data          import { cn } from '../../lib/cn'
+```
+
+Use relative paths (`../../shared/types`), not the `@shared` alias (configured but unused).
+
+### State Management
+
+- **Zustand** for cross-component state: notes, tasks, search query, active category
+- **useState** for ephemeral UI: editing mode, copy feedback, modal visibility, delete confirmation
+- Stores use `interface StoreState` with both state fields and actions
+
+### Error Handling
+
+```ts
+try {
+  await window.electronAPI.notes.create({ content: trimmed })
+} catch (err) {
+  console.error('Failed to create note:', err)
+  setIsSaving(false)  // reset UI state on failure
+}
+```
+
+- try-catch wrapping async IPC calls, with `console.error` + state reset
+- `ErrorBoundary` class component wraps the entire app (in `App.tsx`)
+
+### Tailwind / CSS
+
+- Inline Tailwind classes only. No component-level custom CSS.
+- `cn()` from `lib/cn.ts` (clsx + tailwind-merge) for conditional classes
+- Class ordering: layout → sizing → spacing → borders → background → text → transitions
+- Cards: `rounded-2xl border border-border bg-card p-4 space-y-3 card-hover`
+- Type badges: `text-[9px] px-1.5 py-0.5 rounded font-medium bg-type-*/10 text-type-*`
 
 ## Color Palette (v2 UI)
 
 ### Theme Tokens (Light)
 
-| Token | HSL Value | Usage |
-|-------|-----------|-------|
-| `--background` | `60 9% 98%` | Page (warm stone 50) |
-| `--foreground` | `24 10% 10%` | Text (stone 900) |
+| Token | HSL | Usage |
+|-------|-----|-------|
+| `--background` | `60 9% 98%` | Page (warm stone) |
+| `--foreground` | `24 10% 10%` | Text |
 | `--card` | `0 0% 100%` | Card background |
-| `--primary` | `33 95% 53%` | Accent (amber 600) |
-| `--primary-foreground` | `0 0% 100%` | Text on accent |
-| `--muted` | `60 5% 96%` | Subtle bg (stone 100) |
-| `--muted-foreground` | `25 5% 45%` | Secondary text (stone 500) |
-| `--border` | `24 6% 89%` | Borders (stone 200) |
-| `--ring` | `33 95% 53%` | Focus ring |
+| `--primary` | `33 95% 53%` | Accent (amber) |
+| `--muted` | `60 5% 96%` | Subtle bg |
+| `--muted-foreground` | `25 5% 45%` | Secondary text |
+| `--border` | `24 6% 89%` | Borders |
 
-### Card Type Colors (left stripe)
+### Card Type Colors
 
 | Type | HSL | Hex |
 |------|-----|-----|
@@ -171,48 +132,15 @@ User input: "sk-xxx 我的deepseek api key"
 | Bookmark | `217 91% 60%` | `#3B82F6` |
 | Text | `258 90% 65%` | `#8B5CF6` |
 
-## Testing
-
-### 54 tests (5 files)
-
-| File | Type | Count | Focus |
-|------|------|-------|-------|
-| `tests/heuristic.test.ts` | Unit | 15 | Type detection (apikey/credential/command/bookmark/text), sensitivity |
-| `tests/extract-json.test.ts` | Unit | 6 | JSON parsing, markdown fences, fallback |
-| `tests/markdown.test.ts` | Unit | 3 | Frontmatter serialize/parse round-trip |
-| `tests/task-manager.test.ts` | Unit | 6 | Queue, markDone, markFailed, truncation |
-| `tests/cli-integration.test.ts` | Integration | 24 | Full CLI flow: capture→search→list→show |
-
-### Run tests
-
-```bash
-pnpm test                                          # All 54
-pnpm test -- tests/cli-integration.test.ts         # Integration only
-pnpm test:watch                                     # Watch mode
-```
-
-## Outstanding Work
-
-See `docs/audit-2025-06-30.md` for the full audit (50 items). Key categories:
-
-- **6 Bugs**: WINDOW_SHOW_MAIN misrouted, BookmarkCard Open broken, CLI capture no error handling, duplicate 'sk-' prefix, show.ts duplicate import, alert() for test results
-- **11 Incomplete features**: @ append mechanism, content backfill, theme switching, general settings UI, content editing, new-note button, CLI delete/edit/config commands, card click action, delete confirmation
-- **7 IPC issues**: Unused channels, un-broadcasted events, missing safeHandler wrappers, missing preload methods
-- **12 Dead code**: AppShell, Sidebar, NoteListPanel, NoteCard, NoteDetailPanel, NoteContent, unused path functions, unused close functions, unused store methods
-- **4 Test gaps**: Zero desktop UI tests, boundary cases, AI provider tests
-- **10 Tech debt**: Cache no TTL, log rotation, CardWall no virtualization, N+1 tag queries, cross-dependency, path alias inconsistency, missing auto-update, CLI boilerplate, process.exit issues
-
 ## Git Convention
 
-Use **Conventional Commits**: `<type>: <subject>`
+`<type>: <subject>` — English, imperative, no period, ≤ 72 chars.
 
 | type | when |
 |------|------|
 | `feat` | new feature |
 | `fix` | bug fix |
-| `style` | UI / visual-only changes |
-| `refactor` | code restructure (no behavior change) |
-| `chore` | tooling, deps, build, config |
-| `docs` | documentation only |
-
-**Rules**: type lowercase, subject in English, imperative mood, no period, ≤ 72 chars.
+| `style` | UI / visual-only |
+| `refactor` | code restructure |
+| `chore` | tooling, deps, build |
+| `docs` | documentation |
