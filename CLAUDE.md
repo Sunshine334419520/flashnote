@@ -201,3 +201,18 @@ See `docs/audit-2025-06-30.md` for the full audit (50 items). Key categories:
 - **12 Dead code**: AppShell, Sidebar, NoteListPanel, NoteCard, NoteDetailPanel, NoteContent, unused path functions, unused close functions, unused store methods
 - **4 Test gaps**: Zero desktop UI tests, boundary cases, AI provider tests
 - **10 Tech debt**: Cache no TTL, log rotation, CardWall no virtualization, N+1 tag queries, cross-dependency, path alias inconsistency, missing auto-update, CLI boilerplate, process.exit issues
+
+## Git Convention
+
+Use **Conventional Commits**: `<type>: <subject>`
+
+| type | when |
+|------|------|
+| `feat` | new feature |
+| `fix` | bug fix |
+| `style` | UI / visual-only changes |
+| `refactor` | code restructure (no behavior change) |
+| `chore` | tooling, deps, build, config |
+| `docs` | documentation only |
+
+**Rules**: type lowercase, subject in English, imperative mood, no period, ≤ 72 chars.
