@@ -54,7 +54,7 @@ export function CardWall({ notes: externalNotes, onUpdate, onDelete }: CardWallP
   const filtered = useMemo(() => {
     let result = notes as Note[]
     if (activeCategory) result = result.filter((n) => n.category === activeCategory)
-    if (searchQuery.trim() && !searchQuery.trim().startsWith('@')) {
+    if (searchQuery.trim() && !searchQuery.trim().startsWith('@') && !searchQuery.trim().startsWith('/')) {
       const q = searchQuery.toLowerCase()
       if (!q.includes(' ')) {
         result = result.filter(

@@ -6,13 +6,17 @@ import type { Note } from '../../../shared/types'
 // ── / command definitions ──────────────────────────────────────────────
 
 interface CommandDef {
+  /** Full command name, e.g. '/search'. Empty string for the natural-language entry. */
   name: string
+  /** Short alias, e.g. '/s'. Empty for the natural-language entry. */
   alias: string
+  /** Chinese label */
   label: string
 }
 
 const COMMANDS: CommandDef[] = [
-  { name: '/search', alias: '/s', label: '搜索笔记' },
+  { name: '', alias: '', label: '自然语言（AI 识别意图）' },
+  { name: '/search', alias: '/s', label: '语义搜索' },
   { name: '/add', alias: '/a', label: '创建笔记' },
   { name: '/delete', alias: '/d', label: '删除笔记' },
   { name: '/edit', alias: '/e', label: '编辑笔记' },
@@ -47,7 +51,6 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
 
   const storeNotes = useNoteStore((s) => s.notes)
-  const fetchNotes = useNoteStore((s) => s.fetchNotes)
   const setActiveCategory = useNoteStore((s) => s.setActiveCategory)
 
   const notes = (externalNotes ?? storeNotes) as Note[]
@@ -125,8 +128,10 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
   }
 
   const handleSelectSlash = (cmd: CommandDef) => {
-    // Replace the leading /... with the full command name + space
-    const newValue = value.replace(/^\/\S*/, `${cmd.name} `)
+    // Natural language: replace / with '/ ' to let user type naturally
+    // Explicit command: replace with '/search ' etc.
+    const replacement = cmd.name ? `${cmd.name} ` : '/ '
+    const newValue = value.replace(/^\/\S*$/, replacement)
     onChange(newValue)
     resetDropdown()
     setHint(null)
@@ -178,12 +183,8 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
           onCommit(cmd)
           setHint('AI 处理中...')
         }
-      } else if (trimmed.includes(' ')) {
-        // Natural language → AI search
-        setHint('AI 搜索中...')
-        fetchNotes({ text: trimmed })
       }
-      // single keyword — already handled by live filter, no action needed
+      // single keyword — already handled by live filter; no Enter action needed
     }
 
     if (e.key === 'Escape') {
@@ -197,8 +198,6 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
   const updateHint = (v: string) => {
     if (v.startsWith('/') && v.includes(' ') && v.length > 3) {
       setHint('AI 模式 — Enter 执行')
-    } else if (v.includes(' ') && v.length > 5) {
-      setHint('按 Enter 使用 AI 搜索')
     } else if (v.length > 0 && !v.includes(' ')) {
       setHint('实时过滤中...')
     } else {
@@ -243,8 +242,6 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
       <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-muted-foreground/35">
         <span>输入关键词实时过滤</span>
         <span>·</span>
-        <span>输入完整句子 + Enter = AI 搜索</span>
-        <span>·</span>
         <span>@ 分类筛选</span>
         <span>·</span>
         <span>/ AI 命令</span>
@@ -269,10 +266,17 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
             >
               {dropdown === 'slash' ? (
                 <>
-                  <span className="text-[11px] text-muted-foreground shrink-0 w-5">/</span>
-                  <span className="font-medium shrink-0">{(s as CommandDef).name}</span>
-                  <span className="text-[10px] text-muted-foreground shrink-0">{(s as CommandDef).alias}</span>
-                  <span className="text-[11px] text-muted-foreground/60 ml-auto">{(s as CommandDef).label}</span>
+                  <span className="font-medium text-sm shrink-0 w-20">
+                    {(s as CommandDef).name || '/'}
+                  </span>
+                  <span className="text-[12px] text-muted-foreground flex-1">
+                    {(s as CommandDef).label}
+                  </span>
+                  {(s as CommandDef).alias && (
+                    <span className="text-[10px] text-muted-foreground/40 font-mono shrink-0">
+                      {(s as CommandDef).alias}
+                    </span>
+                  )}
                 </>
               ) : (
                 <>
@@ -311,17 +315,23 @@ function filterCommands(filter: string): CommandDef[] {
 }
 
 function parseCommand(trimmed: string): AICommand | null {
-  // Extract command type from /xxx
-  const match = trimmed.match(/^\/(\S+)\s+(.+)/)
-  if (!match) return null
+  // Explicit command: /search <query>, /add <content>, etc.
+  const explicitMatch = trimmed.match(/^\/(\S+)\s+(.+)/)
+  if (explicitMatch) {
+    const cmd = explicitMatch[1].toLowerCase()
+    const raw = explicitMatch[2]
+    if (cmd === 'search' || cmd === 's') return { type: 'search', raw, explicit: true }
+    if (cmd === 'add' || cmd === 'a') return { type: 'add', raw, explicit: true }
+    if (cmd === 'delete' || cmd === 'd') return { type: 'delete', raw, explicit: true }
+    if (cmd === 'edit' || cmd === 'e') return { type: 'edit', raw, explicit: true }
+    return null
+  }
 
-  const cmd = match[1].toLowerCase()
-  const raw = match[2]
-
-  if (cmd === 'search' || cmd === 's') return { type: 'search', raw, explicit: true }
-  if (cmd === 'add' || cmd === 'a') return { type: 'add', raw, explicit: true }
-  if (cmd === 'delete' || cmd === 'd') return { type: 'delete', raw, explicit: true }
-  if (cmd === 'edit' || cmd === 'e') return { type: 'edit', raw, explicit: true }
+  // Natural language: / <question> — AI identifies intent
+  const naturalMatch = trimmed.match(/^\/\s+(.+)/)
+  if (naturalMatch) {
+    return { type: 'search', raw: naturalMatch[1], explicit: false }
+  }
 
   return null
 }
