@@ -30,7 +30,8 @@ export const MAX_TAGS_PER_NOTE = 10
 export const DEFAULT_CONFIG: AppConfig = {
   storagePath: '', // resolved at runtime
   hotkey: DEFAULT_HOTKEY,
-  theme: 'system'
+  theme: 'system',
+  language: 'system'
 }
 
 // ============================================================

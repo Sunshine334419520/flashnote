@@ -371,8 +371,8 @@ export function groupNotesByTime(notes: Note[]): { group: TimeGroup; notes: Note
 }
 
 export const TIME_GROUP_LABELS: Record<TimeGroup, string> = {
-  Today: '今天',
-  Yesterday: '昨天',
-  'This Week': '本周',
-  Earlier: '更早',
+  Today: 'time.today',
+  Yesterday: 'time.yesterday',
+  'This Week': 'time.thisWeek',
+  Earlier: 'time.earlier',
 }

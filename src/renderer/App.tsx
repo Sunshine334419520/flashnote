@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
+import { I18nProvider } from './i18n'
 import { useTheme } from './hooks/useTheme'
 import { MainView } from './routes/MainView'
 import { QuickCapture } from './routes/QuickCapture'
@@ -20,9 +21,11 @@ function ThemeInit(): ReactElement {
 export function App(): ReactElement {
   return (
     <ErrorBoundary>
-      <HashRouter>
-        <ThemeInit />
-      </HashRouter>
+      <I18nProvider>
+        <HashRouter>
+          <ThemeInit />
+        </HashRouter>
+      </I18nProvider>
     </ErrorBoundary>
   )
 }

@@ -120,5 +120,6 @@ export interface AppConfig {
   storagePath: string
   hotkey: string
   theme: 'light' | 'dark' | 'system'
+  language: 'zh-CN' | 'en' | 'system'
   windowBounds?: { x: number; y: number; width: number; height: number }
 }

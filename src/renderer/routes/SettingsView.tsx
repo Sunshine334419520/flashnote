@@ -1,17 +1,22 @@
 import type { ReactElement } from 'react'
 import { AIProviderSettings } from '../components/settings/AIProviderSettings'
 import { ThemeSelector } from '../components/settings/ThemeSelector'
+import { LanguageSelector } from '../components/settings/LanguageSelector'
 import { useTheme } from '../hooks/useTheme'
+import { useT } from '../i18n'
 
 export function SettingsView(): ReactElement {
   const { theme, setTheme } = useTheme()
+  const { t } = useT()
 
   return (
     <div className="h-screen bg-background overflow-y-auto">
       <div className="pt-8 pb-4 px-8 border-b border-border">
-        <h1 className="text-base font-semibold text-foreground">Settings</h1>
+        <h1 className="text-base font-semibold text-foreground">{t('settings.title')}</h1>
       </div>
       <ThemeSelector theme={theme} onChange={setTheme} />
+      <div className="border-t border-border" />
+      <LanguageSelector />
       <div className="border-t border-border" />
       <AIProviderSettings />
     </div>

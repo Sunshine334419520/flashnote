@@ -1,6 +1,7 @@
 import { type ReactElement, type ChangeEvent, useState, useRef, useCallback, useEffect } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
 import { Search, CornerDownLeft } from 'lucide-react'
+import { useT } from '../../i18n'
 import type { Note } from '../../../shared/types'
 
 // ── / command definitions ──────────────────────────────────────────────
@@ -15,11 +16,11 @@ interface CommandDef {
 }
 
 const COMMANDS: CommandDef[] = [
-  { name: '', alias: '', label: '自然语言（AI 识别意图）' },
-  { name: '/search', alias: '/s', label: '语义搜索' },
-  { name: '/add', alias: '/a', label: '创建笔记' },
-  { name: '/delete', alias: '/d', label: '删除笔记' },
-  { name: '/edit', alias: '/e', label: '编辑笔记' },
+  { name: '', alias: '', label: 'cmd.natural' },
+  { name: '/search', alias: '/s', label: 'cmd.search' },
+  { name: '/add', alias: '/a', label: 'cmd.add' },
+  { name: '/delete', alias: '/d', label: 'cmd.delete' },
+  { name: '/edit', alias: '/e', label: 'cmd.edit' },
 ]
 
 export interface AICommand {
@@ -52,6 +53,7 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
 
   const storeNotes = useNoteStore((s) => s.notes)
   const setActiveCategory = useNoteStore((s) => s.setActiveCategory)
+  const { t } = useT()
 
   const notes = (externalNotes ?? storeNotes) as Note[]
   const isAiMode = mode === 'ai' || value.startsWith('/')
@@ -197,9 +199,9 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
 
   const updateHint = (v: string) => {
     if (v.startsWith('/') && v.includes(' ') && v.length > 3) {
-      setHint('AI 模式 — Enter 执行')
+      setHint(t('search.aiMode'))
     } else if (v.length > 0 && !v.includes(' ')) {
-      setHint('实时过滤中...')
+      setHint(t('search.filtering'))
     } else {
       setHint(null)
     }
@@ -221,11 +223,7 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={() => setHint(null)}
-          placeholder={
-            mode === 'ai'
-              ? '输入搜索、创建，或使用 / 命令...'
-              : '搜索笔记、输入指令或直接记录...'
-          }
+          placeholder={t('search.placeholder')}
           className="w-full bg-transparent pl-10 pr-16 py-3 text-sm outline-none placeholder:text-muted-foreground/35"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -240,11 +238,11 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
 
       {/* Hint bar */}
       <div className="flex items-center gap-1.5 mt-2 pl-[6px] text-[10px] text-muted-foreground/35">
-        <span>输入关键词实时过滤</span>
+        <span>{t('search.hint.keyword')}</span>
         <span>·</span>
-        <span>@ 分类筛选</span>
+        <span>{t('search.hint.category')}</span>
         <span>·</span>
-        <span>/ AI 命令</span>
+        <span>{t('search.hint.ai')}</span>
       </div>
 
       {/* Dropdown (shared for @ and /) */}
@@ -270,7 +268,8 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
                     {(s as CommandDef).name || '/'}
                   </span>
                   <span className="text-[12px] text-muted-foreground flex-1">
-                    {(s as CommandDef).label}
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {t((s as CommandDef).label as any)}
                   </span>
                   {(s as CommandDef).alias && (
                     <span className="text-[10px] text-muted-foreground/40 font-mono shrink-0">

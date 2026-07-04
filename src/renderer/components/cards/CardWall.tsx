@@ -2,6 +2,7 @@ import { type ReactElement, useMemo, useState, useEffect } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
 import { CardFactory } from './CardFactory'
 import { FileText } from 'lucide-react'
+import { useT } from '../../i18n'
 import type { Note } from '../../../shared/types'
 import { groupNotesByTime, TIME_GROUP_LABELS } from '../../data/mockNotes'
 
@@ -50,6 +51,7 @@ export function CardWall({ notes: externalNotes, onUpdate, onDelete }: CardWallP
 
   const notes = externalNotes ?? (storeNotes as Note[])
   const columnCount = useColumnCount()
+  const { t } = useT()
 
   const filtered = useMemo(() => {
     let result = notes as Note[]
@@ -88,7 +90,7 @@ export function CardWall({ notes: externalNotes, onUpdate, onDelete }: CardWallP
     return (
       <div className="flex flex-col items-center justify-center py-32 text-muted-foreground/40">
         <FileText size={48} className="mb-4 opacity-20" />
-        <p className="text-sm font-medium text-muted-foreground/50">没有笔记</p>
+        <p className="text-sm font-medium text-muted-foreground/50">{t('empty.title')}</p>
         <p className="text-xs mt-1 text-muted-foreground/30">使用 ⌥Space 快速记录，或在顶部搜索框输入内容</p>
       </div>
     )
@@ -101,7 +103,7 @@ export function CardWall({ notes: externalNotes, onUpdate, onDelete }: CardWallP
         return (
           <section key={group}>
             <h3 className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-3 px-1">
-              {TIME_GROUP_LABELS[group]}
+              {t(TIME_GROUP_LABELS[group] as any)}
               <span className="ml-1.5 text-muted-foreground/25">{groupNotes.length}</span>
             </h3>
             <div className="flex gap-4">
