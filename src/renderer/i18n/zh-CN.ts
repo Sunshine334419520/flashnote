@@ -28,10 +28,12 @@ const zhCN = {
   'time.weeksAgo': '{n}周前',
 
   // Card footer actions
+  'card.save': '保存',
   'card.copy': '复制',
   'card.copied': '已复制',
   'card.edit': '编辑',
   'card.delete': '删除',
+  'card.copyFull': '复制全文',
   'card.expand': '展开全文',
   'card.open': '打开',
   'card.copyLink': '复制链接',

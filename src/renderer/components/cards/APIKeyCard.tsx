@@ -2,6 +2,8 @@ import { type ReactElement, useState, useRef, useEffect } from 'react'
 import type { Note } from '../../../shared/types'
 import { Copy, Key, Eye, EyeOff, Pencil, Trash2, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useT } from '../../i18n'
+import { useFormatTime } from '../../hooks/useFormatTime'
 
 interface Props {
   note: Note
@@ -9,9 +11,9 @@ interface Props {
   onDelete?: (id: string) => void
 }
 
-const TYPE_LABEL = 'API Key'
-
 export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
+  const { t } = useT()
+  const formatTime = useFormatTime()
   const [revealed, setRevealed] = useState(false)
   const [copied, setCopied] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -50,7 +52,7 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
     setConfirming(false)
   }
 
-  const timeAgo = formatRelativeTime(note.updatedAt)
+  const timeAgo = formatTime(note.updatedAt)
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 space-y-3 card-hover">
@@ -72,7 +74,7 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
           <>
             <span className="text-sm font-medium truncate flex-1">{note.title}</span>
             <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-type-apikey/10 text-type-apikey shrink-0 select-none">
-              {TYPE_LABEL}
+              {t('type.apikey')}
             </span>
           </>
         )}
@@ -86,10 +88,10 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
       {/* Body */}
       {confirming ? (
         <div className="text-center py-2">
-          <p className="text-xs text-muted-foreground mb-2">确认删除这条笔记？</p>
+          <p className="text-xs text-muted-foreground mb-2">{t('confirm.delete')}</p>
           <div className="flex items-center justify-center gap-2">
-            <button onClick={handleCancel} className="text-[11px] px-3 py-1 rounded-lg border border-border hover:bg-muted transition-colors">取消</button>
-            <button onClick={() => { onDelete?.(note.id); setConfirming(false) }} className="text-[11px] px-3 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors">确认删除</button>
+            <button onClick={handleCancel} className="text-[11px] px-3 py-1 rounded-lg border border-border hover:bg-muted transition-colors">{t('confirm.cancel')}</button>
+            <button onClick={() => { onDelete?.(note.id); setConfirming(false) }} className="text-[11px] px-3 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors">{t('confirm.ok')}</button>
           </div>
         </div>
       ) : editing ? (
@@ -101,8 +103,8 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
             onKeyDown={(e) => { if (e.key === 'Escape') handleCancel() }}
           />
           <div className="flex items-center justify-end gap-2">
-            <button onClick={handleCancel} className="text-[11px] px-3 py-1 rounded-lg border border-border hover:bg-muted transition-colors">取消</button>
-            <button onClick={handleSave} className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">保存</button>
+            <button onClick={handleCancel} className="text-[11px] px-3 py-1 rounded-lg border border-border hover:bg-muted transition-colors">{t('confirm.cancel')}</button>
+            <button onClick={handleSave} className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">{t('card.save')}</button>
           </div>
         </div>
       ) : (
@@ -113,7 +115,7 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
           <button
             onClick={() => setRevealed(!revealed)}
             className="shrink-0 p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
-            title={revealed ? '隐藏' : '显示'}
+            title={revealed ? t('card.hide') : t('card.reveal')}
           >
             {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
@@ -139,13 +141,13 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
                 )}
               >
                 {copied ? <Check size={11} /> : <Copy size={11} />}
-                {copied ? '已复制' : '复制'}
+                {copied ? t('card.copied') : t('card.copy')}
               </button>
               <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                <Pencil size={11} /> 编辑
+                <Pencil size={11} /> {t('card.edit')}
               </button>
               <button onClick={() => setConfirming(true)} className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
-                <Trash2 size={11} /> 删除
+                <Trash2 size={11} /> {t('card.delete')}
               </button>
             </div>
           </div>
@@ -153,16 +155,4 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
       )}
     </div>
   )
-}
-
-function formatRelativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return '刚刚'
-  if (mins < 60) return `${mins}分钟前`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}小时前`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}天前`
-  return `${Math.floor(days / 7)}周前`
 }

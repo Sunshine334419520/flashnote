@@ -2,6 +2,7 @@ import { type ReactElement, useState, useEffect, useRef } from 'react'
 import type { Note } from '../../../shared/types'
 import { FileText, Copy, Pencil, Trash2, Check, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useT } from '../../i18n'
 
 interface Props {
   note: Note
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): ReactElement {
+  const { t } = useT()
   const [copied, setCopied] = useState(false)
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -86,19 +88,19 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
         <div className="flex-1 overflow-y-auto p-4">
           {confirming ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground mb-3">确认删除这条笔记？</p>
+              <p className="text-sm text-muted-foreground mb-3">{t('confirm.delete')}</p>
               <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={() => setConfirming(false)}
                   className="text-xs px-4 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
                 >
-                  取消
+                  {t('confirm.cancel')}
                 </button>
                 <button
                   onClick={handleDelete}
                   className="text-xs px-4 py-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
                 >
-                  确认删除
+                  {t('confirm.ok')}
                 </button>
               </div>
             </div>
@@ -129,13 +131,13 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
                   onClick={() => { setEditing(false); setConfirming(false) }}
                   className="text-[11px] px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
                 >
-                  取消
+                  {t('confirm.cancel')}
                 </button>
                 <button
                   onClick={handleSave}
                   className="text-[11px] px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
-                  保存
+                  {t('card.save')}
                 </button>
               </>
             ) : (
@@ -150,19 +152,19 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
                   )}
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
-                  {copied ? '已复制' : '复制全文'}
+                  {copied ? t('card.copied') : t('card.copyFull')}
                 </button>
                 <button
                   onClick={() => setEditing(true)}
                   className="flex items-center gap-1 text-[11px] px-2 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
-                  <Pencil size={12} /> 编辑
+                  <Pencil size={12} /> {t('card.edit')}
                 </button>
                 <button
                   onClick={() => setConfirming(true)}
                   className="flex items-center gap-1 text-[11px] px-2 py-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
                 >
-                  <Trash2 size={12} /> 删除
+                  <Trash2 size={12} /> {t('card.delete')}
                 </button>
               </>
             )}

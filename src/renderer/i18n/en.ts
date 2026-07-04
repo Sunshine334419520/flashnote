@@ -25,10 +25,12 @@ const en: Translations = {
   'time.daysAgo': '{n}d ago',
   'time.weeksAgo': '{n}w ago',
 
+  'card.save': 'Save',
   'card.copy': 'Copy',
   'card.copied': 'Copied',
   'card.edit': 'Edit',
   'card.delete': 'Delete',
+  'card.copyFull': 'Copy full',
   'card.expand': 'Expand',
   'card.open': 'Open',
   'card.copyLink': 'Copy link',
