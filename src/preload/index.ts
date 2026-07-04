@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { homedir } from 'os'
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
 import type {
@@ -10,6 +13,19 @@ import type {
   SearchResult,
   TaskInfo
 } from '../shared/types'
+
+// Apply theme BEFORE page renders — reads config.json synchronously (no flash)
+try {
+  const configPath = join(homedir(), 'FlashNote', 'config.json')
+  const raw = readFileSync(configPath, 'utf-8')
+  const config = JSON.parse(raw) as { theme?: string }
+  const t = config.theme ?? 'system'
+  if (t === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else if (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.classList.add('dark')
+  }
+} catch { /* config doesn't exist yet — use system default */ }
 
 const electronAPI = {
   notes: {
@@ -26,7 +42,6 @@ const electronAPI = {
   },
 
   ai: {
-    // Provider management
     providers: {
       list: (): Promise<AIProviderConfig[]> =>
         ipcRenderer.invoke(IPC_CHANNELS.AI_PROVIDER_LIST),
@@ -46,7 +61,6 @@ const electronAPI = {
       test: (id: string): Promise<boolean> =>
         ipcRenderer.invoke(IPC_CHANNELS.AI_PROVIDER_TEST, id)
     },
-    // Smart parse
     parse: (rawInput: string): Promise<SmartParseResult> =>
       ipcRenderer.invoke(IPC_CHANNELS.AI_PARSE, { rawInput })
   },
@@ -85,7 +99,6 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, url)
   },
 
-  // Event subscriptions (main → renderer push)
   on: (channel: string, callback: (...args: unknown[]) => void): (() => void) => {
     const validEvents: readonly string[] = [
       IPC_CHANNELS.EVENT_NOTE_CREATED,

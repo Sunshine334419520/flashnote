@@ -5,9 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
     />
     <title>FlashNote</title>
+    <script>
+      // Blocking script: apply theme BEFORE first paint (avoids white flash)
+      (function() {
+        var t = localStorage.getItem('flashnote-theme');
+        if (t === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body class="bg-background text-foreground antialiased">
     <div id="root"></div>
