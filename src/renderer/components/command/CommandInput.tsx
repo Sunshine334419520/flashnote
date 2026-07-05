@@ -1,6 +1,7 @@
 import { type ReactElement, type ChangeEvent, useState, useRef, useCallback, useEffect } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
-import { Search, CornerDownLeft } from 'lucide-react'
+import { CornerDownLeft } from 'lucide-react'
+import { ICONS } from '../../assets/iconAssets'
 import { useT } from '../../i18n'
 import type { Note } from '../../../shared/types'
 
@@ -214,7 +215,7 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
   return (
     <div className="relative w-full max-w-2xl mx-auto">
       <div className="relative rounded-xl border border-border bg-card glow-amber">
-        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+        <img src={ICONS.icon64} className="absolute left-4 top-1/2 -translate-y-1/2 w-[15px] h-[15px] opacity-40 pointer-events-none" alt="" />
         <input
           ref={inputRef}
           type="text"

@@ -61,7 +61,7 @@ function createMainWindow(): void {
     minWidth: 680,
     minHeight: 420,
     backgroundColor: getThemeBackgroundColor(),
-    icon: nativeImage.createFromPath(getAppIconPath()),
+    icon: nativeImage.createFromPath(ICONS.dock),
     ...windowFrameOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -136,7 +136,7 @@ function createSettingsWindow(): void {
     width: 700,
     height: 560,
     backgroundColor: getThemeBackgroundColor(),
-    icon: nativeImage.createFromPath(getAppIconPath()),
+    icon: nativeImage.createFromPath(ICONS.dock),
     ...windowFrameOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -196,21 +196,19 @@ function registerGlobalShortcut(hotkey: string): void {
   }
 }
 
-function iconPath(name: string): string {
-  return isDev
-    ? join(__dirname, '../../assets/icons/v1', name)
-    : join(process.resourcesPath, 'assets/icons/v1', name)
-}
+// ── Centralized icon assets ──────────────────────────────────────────────
+const ICON_VERSION = 'v2'
+const ICON_BASE = isDev
+  ? join(__dirname, '../../assets/icons', ICON_VERSION)
+  : join(process.resourcesPath, 'assets/icons', ICON_VERSION)
 
-/** Returns the platform-specific app icon path (for window / taskbar, not dock). */
-function getAppIconPath(): string {
-  if (process.platform === 'win32') return iconPath('icon_win_256x256.png')
-  if (process.platform === 'linux') return iconPath('icon_linux_256x256.png')
-  return iconPath('icon_dock_256x256.png') // macOS
+const ICONS = {
+  tray:  join(ICON_BASE, 'icon_16x16.png'),
+  dock:  join(ICON_BASE, 'icon_dock_256x256.png'),
 }
 
 function createTrayIcon(): Electron.NativeImage {
-  return nativeImage.createFromPath(iconPath('icon_16x16.png'))
+  return nativeImage.createFromPath(ICONS.tray)
 }
 
 function createTray(): void {
@@ -320,7 +318,7 @@ app.whenReady().then(() => {
 
   // Dock icon (macOS)
   if (process.platform === 'darwin' && app.dock) {
-    app.dock.setIcon(nativeImage.createFromPath(iconPath('icon_dock_256x256.png')))
+    app.dock.setIcon(nativeImage.createFromPath(ICONS.dock))
   }
 
   createTray()
