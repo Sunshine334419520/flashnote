@@ -76,7 +76,7 @@ export function CardWall({ notes: externalNotes, onUpdate, onDelete }: CardWallP
     return (
       <div className="flex gap-4 p-6">
         {Array.from({ length: columnCount }).map((_, ci) => (
-          <div key={ci} className="flex-1 space-y-4">
+          <div key={ci} className="flex-1 min-w-0 space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="h-32 rounded-2xl bg-muted/40 animate-pulse" />
             ))}
@@ -108,7 +108,7 @@ export function CardWall({ notes: externalNotes, onUpdate, onDelete }: CardWallP
             </h3>
             <div className="flex gap-4">
               {cols.map((colNotes, ci) => (
-                <div key={ci} className="flex-1 space-y-4">
+                <div key={ci} className="flex-1 min-w-0 space-y-4">
                   {colNotes.map((note) => (
                     <CardFactory key={note.id} note={note} onUpdate={onUpdate} onDelete={onDelete} />
                   ))}

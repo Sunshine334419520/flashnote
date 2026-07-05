@@ -61,6 +61,7 @@ function createMainWindow(): void {
     minWidth: 680,
     minHeight: 420,
     backgroundColor: getThemeBackgroundColor(),
+    icon: nativeImage.createFromPath(getAppIconPath()),
     ...windowFrameOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -135,6 +136,7 @@ function createSettingsWindow(): void {
     width: 700,
     height: 560,
     backgroundColor: getThemeBackgroundColor(),
+    icon: nativeImage.createFromPath(getAppIconPath()),
     ...windowFrameOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -194,31 +196,21 @@ function registerGlobalShortcut(hotkey: string): void {
   }
 }
 
+function iconPath(name: string): string {
+  return isDev
+    ? join(__dirname, '../../assets/icons/v1', name)
+    : join(process.resourcesPath, 'assets/icons/v1', name)
+}
+
+/** Returns the platform-specific app icon path (for window / taskbar, not dock). */
+function getAppIconPath(): string {
+  if (process.platform === 'win32') return iconPath('icon_win_256x256.png')
+  if (process.platform === 'linux') return iconPath('icon_linux_256x256.png')
+  return iconPath('icon_dock_256x256.png') // macOS
+}
+
 function createTrayIcon(): Electron.NativeImage {
-  // Create a 16x16 tray icon programmatically — a simple "F" dot
-  const size = 16
-  const canvas = Buffer.alloc(size * size * 4)
-
-  // Draw a simple filled circle (dot)
-  const cx = size / 2
-  const cy = size / 2
-  const r = 6
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const i = (y * size + x) * 4
-      const dx = x - cx
-      const dy = y - cy
-      if (dx * dx + dy * dy <= r * r) {
-        canvas[i] = 100     // R
-        canvas[i + 1] = 140  // G
-        canvas[i + 2] = 255  // B
-        canvas[i + 3] = 255  // A
-      }
-    }
-  }
-
-  return nativeImage.createFromBuffer(canvas, { width: size, height: size })
+  return nativeImage.createFromPath(iconPath('icon_16x16.png'))
 }
 
 function createTray(): void {
@@ -325,6 +317,12 @@ app.whenReady().then(() => {
 
   createMainWindow()
   createQuickCaptureWindow()
+
+  // Dock icon (macOS)
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setIcon(nativeImage.createFromPath(iconPath('icon_dock_256x256.png')))
+  }
+
   createTray()
   registerGlobalShortcut(DEFAULT_HOTKEY)
 })

@@ -1,6 +1,6 @@
 import { type ReactElement, useState, useRef, useEffect } from 'react'
 import type { Note } from '../../../shared/types'
-import { Copy, Globe, ExternalLink, Pencil, Trash2, Check } from 'lucide-react'
+import { Copy, Globe, Pencil, Trash2, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useT } from '../../i18n'
 import { useFormatTime } from '../../hooks/useFormatTime'
@@ -67,7 +67,11 @@ export function BookmarkCard({ note, onUpdate, onDelete }: Props): ReactElement 
         </div>
       ) : (
         <div>
-          {domain && <p className="text-[11px] font-medium text-type-bookmark mb-1 truncate">{domain}</p>}
+          {domain && (
+            <button onClick={handleOpen} className="text-[11px] font-medium text-type-bookmark hover:underline truncate block text-left w-full">
+              {domain}
+            </button>
+          )}
           <p className="text-[11px] text-muted-foreground/60 truncate">{url}</p>
         </div>
       )}
@@ -78,7 +82,6 @@ export function BookmarkCard({ note, onUpdate, onDelete }: Props): ReactElement 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground min-w-0"><span className="truncate">{note.category}</span><span>·</span><span className="shrink-0">{timeAgo}</span></div>
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={handleOpen} className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md text-muted-foreground hover:text-type-bookmark hover:bg-type-bookmark/10 transition-colors"><ExternalLink size={11} /> {t('card.open')}</button>
               <button onClick={handleCopyLink} className={cn('flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md transition-colors', copied ? 'text-type-bookmark bg-type-bookmark/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted')}>{copied ? <Check size={11} /> : <Copy size={11} />}{copied ? t('card.copied') : t('card.copyLink')}</button>
               <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Pencil size={11} /> {t('card.edit')}</button>
               <button onClick={() => setConfirming(true)} className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={11} /> {t('card.delete')}</button>
