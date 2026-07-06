@@ -42,16 +42,37 @@ function getThemeBackgroundColor(): string {
 }
 
 /**
- * Platform-aware window frame options. The renderer has no custom window
- * controls (min/max/close), so on Windows/Linux we must keep the native frame.
- * On macOS we use hiddenInset for a clean look that still shows traffic lights.
- * QuickCapture is intentionally frameless regardless of platform.
+ * Platform-aware window frame options.
+ * - macOS: hiddenInset (frameless, traffic lights overlay).
+ * - Windows/Linux: native frame (keeps built-in min/max/close controls).
+ *   Title-bar color is synced to the app theme via syncNativeTheme() below.
  */
-function windowFrameOptions(): { frame?: boolean; titleBarStyle?: 'hiddenInset' } {
+function titleBarOptions(): { titleBarStyle?: 'hiddenInset'; frame?: boolean } {
   if (process.platform === 'darwin') {
     return { titleBarStyle: 'hiddenInset' }
   }
   return { frame: true }
+}
+
+/**
+ * Sync the OS native theme to the app's configured theme so the native
+ * title bar (Windows) / UI widgets match the app background color instead
+ * of defaulting to the system light/dark independently.
+ */
+function syncNativeTheme(): void {
+  try {
+    const configPath = join(homedir(), 'FlashNote', 'config.json')
+    const raw = readFileSync(configPath, 'utf-8')
+    const config = JSON.parse(raw) as { theme?: string }
+    if (config.theme === 'dark') {
+      nativeTheme.themeSource = 'dark'
+    } else if (config.theme === 'light') {
+      nativeTheme.themeSource = 'light'
+    }
+    // 'system' → keep OS default
+  } catch {
+    // Config doesn't exist yet (first run) — keep OS default.
+  }
 }
 
 function createMainWindow(): void {
@@ -62,7 +83,7 @@ function createMainWindow(): void {
     minHeight: 420,
     backgroundColor: getThemeBackgroundColor(),
     icon: nativeImage.createFromPath(ICONS.dock),
-    ...windowFrameOptions(),
+    ...titleBarOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -137,7 +158,7 @@ function createSettingsWindow(): void {
     height: 560,
     backgroundColor: getThemeBackgroundColor(),
     icon: nativeImage.createFromPath(ICONS.dock),
-    ...windowFrameOptions(),
+    ...titleBarOptions(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -301,6 +322,12 @@ function initServices(): { storagePath: string; aiService: AIService; taskManage
 // ============================================================
 
 app.whenReady().then(() => {
+  // Remove the default Electron menu bar (File/Edit/View/...) on all platforms.
+  Menu.setApplicationMenu(null)
+
+  // Make the Windows/Linux native title bar follow the app theme (dark/light).
+  syncNativeTheme()
+
   const { storagePath, aiService, taskManager } = initServices()
 
   registerAllIpcHandlers({
