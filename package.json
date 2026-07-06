@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.main.json && tsc --noEmit -p tsconfig.renderer.json && tsc --noEmit -p tsconfig.preload.json",
     "lint": "eslint src/ --ext .ts,.tsx",
     "test": "vitest run",
-    "pretest": "npm rebuild better-sqlite3 2>/dev/null; node -e \"require('better-sqlite3')\"",
+    "pretest": "node -e \"require('better-sqlite3')\"",
     "test:watch": "vitest",
     "test:single": "vitest run --reporter=verbose",
     "test:e2e": "playwright test",
