@@ -11,7 +11,11 @@ import type {
   NoteUpdateRequest,
   SearchQuery,
   SearchResult,
-  TaskInfo
+  TaskInfo,
+  AICommandRequest,
+  AICommandResult,
+  AICommandConfirmRequest,
+  AICommandConfirmResult
 } from '../shared/types'
 
 // Apply theme BEFORE page renders — reads config.json synchronously (no flash)
@@ -74,6 +78,15 @@ const electronAPI = {
     },
     parse: (rawInput: string): Promise<SmartParseResult> =>
       ipcRenderer.invoke(IPC_CHANNELS.AI_PARSE, { rawInput })
+  },
+
+  aiCommand: {
+    run: (req: AICommandRequest): Promise<AICommandResult> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_COMMAND_RUN, req),
+    cancel: (requestId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_COMMAND_CANCEL, requestId),
+    confirm: (req: AICommandConfirmRequest): Promise<AICommandConfirmResult> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AI_COMMAND_CONFIRM, req)
   },
 
   search: {

@@ -7,6 +7,7 @@ import { getDefaultStoragePath, ensureStorageDirectories } from './utils/paths'
 import { loadConfig } from './services/config.service'
 import { initStorageService } from './services/storage.service'
 import { AIService } from './services/ai'
+import { AICommandService } from './services/ai/command.service'
 import { TaskManager } from './services/task-manager'
 import { initLogger, logger } from './utils/logger'
 import { DEFAULT_HOTKEY } from '../shared/constants'
@@ -262,7 +263,7 @@ function createTray(): void {
 // Service initialization
 // ============================================================
 
-function initServices(): { storagePath: string; aiService: AIService; taskManager: TaskManager } {
+function initServices(): { storagePath: string; aiService: AIService; aiCommandService: AICommandService; taskManager: TaskManager } {
   const storagePath = getDefaultStoragePath()
 
   // Ensure ~/FlashNote/ exists with all subdirectories
@@ -288,12 +289,15 @@ function initServices(): { storagePath: string; aiService: AIService; taskManage
   // Initialize AI service (loads providers from SQLite settings)
   const aiService = new AIService(storagePath)
 
+  // AI command execution (search/add/delete/edit) for the command bar
+  const aiCommandService = new AICommandService(aiService)
+
   // Initialize task manager (in-memory only)
   const taskManager = new TaskManager()
 
   logger.info('main:init', 'Services initialized', { storagePath })
 
-  return { storagePath, aiService, taskManager }
+  return { storagePath, aiService, aiCommandService, taskManager }
 }
 
 // ============================================================
@@ -301,11 +305,12 @@ function initServices(): { storagePath: string; aiService: AIService; taskManage
 // ============================================================
 
 app.whenReady().then(() => {
-  const { storagePath, aiService, taskManager } = initServices()
+  const { storagePath, aiService, aiCommandService, taskManager } = initServices()
 
   registerAllIpcHandlers({
     storagePath,
     aiService,
+    aiCommandService,
     taskManager,
     showQuickCaptureWindow,
     hideQuickCaptureWindow,

@@ -93,6 +93,42 @@ export interface SmartParseResult {
 }
 
 // ============================================================
+// AI command execution (search / add / delete / edit)
+// ============================================================
+
+/** A command submitted from the command bar. `id` is used to cancel an in-flight run. */
+export interface AICommandRequest {
+  id: string
+  type: 'search' | 'add' | 'delete' | 'edit'
+  raw: string
+  explicit: boolean  // false = natural-language `/`, intent is inferred first
+}
+
+/** Proposed edit — only the fields the AI wants to change. */
+export interface EditProposal {
+  title?: string
+  content?: string
+  tags?: string[]
+  category?: string
+}
+
+/** Result of running a command. delete/edit return candidates/preview pending confirmation. */
+export type AICommandResult =
+  | { kind: 'search'; query: string; notes: Note[] }
+  | { kind: 'add'; note: Note }
+  | { kind: 'delete_candidates'; query: string; matches: Note[]; reasons: Record<string, string> }
+  | { kind: 'edit_preview'; target: Note; proposed: EditProposal; summary: string }
+
+/** Second-phase confirmation: apply a delete or edit the user approved. */
+export type AICommandConfirmRequest =
+  | { type: 'delete'; noteIds: string[] }
+  | { type: 'edit'; noteId: string; proposed: EditProposal }
+
+export type AICommandConfirmResult =
+  | { kind: 'deleted'; count: number }
+  | { kind: 'edited'; note: Note }
+
+// ============================================================
 // Search types
 // ============================================================
 

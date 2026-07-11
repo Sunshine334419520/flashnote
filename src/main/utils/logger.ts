@@ -11,14 +11,27 @@ export function initLogger(storagePath: string): void {
   }
 }
 
+function pad(n: number, len = 2): string {
+  return String(n).padStart(len, '0')
+}
+
+/** Local calendar date, e.g. 2026-07-11 (not UTC). */
+function localDate(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** Local wall-clock timestamp, e.g. 2026-07-11 23:51:18.123 (not UTC). */
+function localTimestamp(d: Date): string {
+  return `${localDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`
+}
+
 function getLogPath(): string {
   if (!logDir) return ''
-  const date = new Date().toISOString().slice(0, 10)
-  return join(logDir, `flashnote-${date}.log`)
+  return join(logDir, `flashnote-${localDate(new Date())}.log`)
 }
 
 function write(level: string, source: string, message: string, data?: unknown): void {
-  const timestamp = new Date().toISOString()
+  const timestamp = localTimestamp(new Date())
   const line = `[${timestamp}] [${level}] [${source}] ${message}`
   const full = data ? line + ' ' + JSON.stringify(data) : line
 

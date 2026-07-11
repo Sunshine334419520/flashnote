@@ -7,6 +7,7 @@ interface NoteState {
   isLoading: boolean
   activeCategory: string | null
   searchQuery: string
+  searchResult: { query: string; notes: Note[] } | null
 
   // Actions
   fetchNotes: (query?: Partial<SearchQuery>) => Promise<void>
@@ -16,6 +17,7 @@ interface NoteState {
   selectNote: (id: string | null) => void
   setActiveCategory: (category: string | null) => void
   setSearchQuery: (query: string) => void
+  setSearchResult: (result: { query: string; notes: Note[] } | null) => void
 
   // Derived helpers
   getSelectedNote: () => Note | undefined
@@ -27,6 +29,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   isLoading: false,
   activeCategory: null,
   searchQuery: '',
+  searchResult: null,
 
   fetchNotes: async (query) => {
     set({ isLoading: true })
@@ -77,6 +80,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
+
+  setSearchResult: (result) => set({ searchResult: result }),
 
   getSelectedNote: () => {
     const { notes, selectedNoteId } = get()

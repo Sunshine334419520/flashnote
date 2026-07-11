@@ -5,9 +5,12 @@ import { AICache } from './cache'
 import { AnthropicProvider } from './anthropic.provider'
 import { OpenAICompatibleProvider } from './openai-compat.provider'
 import { heuristicParse } from './base'
-import type { AIProvider } from './base'
+import type { AIProvider, AICompletionRequest } from './base'
 import type { AIProviderConfig, AIProviderType, SmartParseResult } from '../../../shared/types'
 import type { SettingRow } from '../../database/schema'
+import { logger } from '../../utils/logger'
+import { maskSecrets } from '../../utils/mask'
+import { AI_COMMAND, AI_LOG_PREVIEW_LENGTH } from '../../../shared/constants'
 
 export class AIService {
   private providers: Map<string, AIProvider> = new Map()
@@ -90,7 +93,7 @@ export class AIService {
   // Smart Parse
   // ============================================================
 
-  async parse(rawInput: string): Promise<SmartParseResult> {
+  async parse(rawInput: string, signal?: AbortSignal): Promise<SmartParseResult> {
     // 1. Cache check
     const cached = this.cache.get(rawInput)
     if (cached) return cached
@@ -103,12 +106,64 @@ export class AIService {
 
     // 3. AI parse
     try {
-      const result = await provider.parse(rawInput)
+      const result = await provider.parse(rawInput, signal)
       this.cache.set(rawInput, result)
       return result
     } catch (err) {
+      if (signal?.aborted) throw err  // user cancelled — don't mask with heuristic
       console.warn('AI parse failed, falling back to heuristic:', err)
       return heuristicParse(rawInput)
+    }
+  }
+
+  /**
+   * Generic completion for command execution (search/delete/edit/intent).
+   * Unlike parse(), there is no heuristic fallback — throws when no provider
+   * is configured, and enforces a 30s timeout merged with the caller's signal.
+   */
+  async complete(req: AICompletionRequest): Promise<string> {
+    const provider = this.getActiveProvider()
+    if (!provider) throw new Error('NO_ACTIVE_PROVIDER')
+
+    const timeout = AbortSignal.timeout(AI_COMMAND.TIMEOUT_MS)
+    const signal = req.signal ? AbortSignal.any([req.signal, timeout]) : timeout
+
+    const start = Date.now()
+    logger.info('ai:complete', 'request', {
+      req: req.traceId,
+      step: req.label,
+      model: provider.config.model,
+      maxTokens: req.maxTokens,
+      json: req.json === true,
+      user: maskSecrets(req.user).slice(0, AI_LOG_PREVIEW_LENGTH)
+    })
+    try {
+      const res = await provider.complete({ ...req, signal })
+      logger.info('ai:complete', 'response', {
+        req: req.traceId,
+        step: req.label,
+        elapsedMs: Date.now() - start,
+        finishReason: res.finishReason,
+        chars: res.content.length,
+        preview: maskSecrets(res.content).slice(0, AI_LOG_PREVIEW_LENGTH)
+      })
+      if (res.finishReason === 'length') {
+        logger.warn('ai:complete', 'response truncated by max_tokens', {
+          req: req.traceId,
+          step: req.label,
+          maxTokens: req.maxTokens
+        })
+      }
+      return res.content
+    } catch (err) {
+      logger.warn('ai:complete', 'failed', {
+        req: req.traceId,
+        step: req.label,
+        elapsedMs: Date.now() - start,
+        aborted: signal.aborted,
+        error: (err as Error).message
+      })
+      throw err
     }
   }
 

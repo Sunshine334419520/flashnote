@@ -27,6 +27,42 @@ export const MAX_CONTENT_LENGTH_FOR_AI = 8000
 
 export const MAX_TAGS_PER_NOTE = 10
 
+/**
+ * Tuning knobs for AI command execution (search/add/delete/edit).
+ * Centralized so behavior is adjustable without hunting magic numbers in code.
+ */
+export const AI_COMMAND = {
+  /** Max FTS candidates handed to the LLM for rerank/locate. */
+  CANDIDATE_LIMIT: 40,
+  /** Below this candidate count, top up recall with recent notes. */
+  RECALL_TOPUP_THRESHOLD: 8,
+  /** Per-candidate content snippet length sent to the model (chars). */
+  SNIPPET_LENGTH: 160,
+  /** Minimum rerank score (0–1) for a note to appear in search results. */
+  RELEVANCE_THRESHOLD: 0.3,
+  /** Target note content sent to the edit-propose prompt (chars). */
+  EDIT_CONTENT_LENGTH: 4000,
+  /** Natural-language input length for intent classification (chars). */
+  INTENT_INPUT_LENGTH: 2000,
+  /** AI call timeout in milliseconds. */
+  TIMEOUT_MS: 30_000,
+  /** Per-operation max output tokens. Generous headroom so structured JSON
+   *  answers are never truncated (models may spend tokens reasoning first). */
+  MAX_TOKENS: {
+    PARSE: 2048,
+    RERANK: 2048,
+    LOCATE: 2048,
+    EDIT: 2048,
+    INTENT: 256
+  }
+} as const
+
+/** Max chars of AI request/response recorded in logs (previews are masked, then truncated). */
+export const AI_LOG_PREVIEW_LENGTH = 4000
+
+/** DOM keyCode reported while an IME composition is active (e.g. a pinyin candidate). */
+export const IME_COMPOSING_KEYCODE = 229
+
 export const DEFAULT_CONFIG: AppConfig = {
   storagePath: '', // resolved at runtime
   hotkey: DEFAULT_HOTKEY,

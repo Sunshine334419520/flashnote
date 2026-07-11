@@ -1,8 +1,9 @@
 import { type ReactElement, type ChangeEvent, useState, useRef, useCallback, useEffect } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
-import { CornerDownLeft } from 'lucide-react'
+import { CornerDownLeft, Loader2, Square } from 'lucide-react'
 import { ICONS } from '../../assets/iconAssets'
 import { useT } from '../../i18n'
+import { IME_COMPOSING_KEYCODE } from '../../../shared/constants'
 import type { Note } from '../../../shared/types'
 
 // ── / command definitions ──────────────────────────────────────────────
@@ -38,11 +39,15 @@ interface Props {
   onChange: (value: string) => void
   notes?: Note[]
   onCommit?: (cmd: AICommand) => void
+  /** True while an async `/` command is running: locks input and shows the abort/processing UI. */
+  processing?: boolean
+  /** Called when the user aborts a running command (stop icon or Esc). */
+  onAbort?: () => void
 }
 
 // ── Component ──────────────────────────────────────────────────────────
 
-export function CommandInput({ mode, value, onChange, notes: externalNotes, onCommit }: Props): ReactElement {
+export function CommandInput({ mode, value, onChange, notes: externalNotes, onCommit, processing = false, onAbort }: Props): ReactElement {
   // Dropdown state: null = none, 'at' = @ mention, 'slash' = / command
   const [dropdown, setDropdown] = useState<'at' | 'slash' | null>(null)
   const [filter, setFilter] = useState('')
@@ -144,6 +149,17 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
   // ── Keyboard ─────────────────────────────────────────────────────
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Processing: input is locked. Only Esc (abort) is honored.
+    if (processing) {
+      e.preventDefault()
+      if (e.key === 'Escape') onAbort?.()
+      return
+    }
+
+    // IME composition (e.g. confirming a pinyin candidate with Enter): let the
+    // input method own the key — never treat it as submit/select/navigate.
+    if (e.nativeEvent.isComposing || e.keyCode === IME_COMPOSING_KEYCODE) return
+
     // Dropdown open: arrow keys + enter
     if (dropdown && suggestions.length > 0) {
       if (e.key === 'ArrowDown') {
@@ -184,7 +200,7 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
         const cmd = parseCommand(trimmed)
         if (cmd && onCommit) {
           onCommit(cmd)
-          setHint('AI 处理中...')
+          setHint(null)
         }
       }
       // single keyword — already handled by live filter; no Enter action needed
@@ -224,27 +240,58 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={() => setHint(null)}
+          readOnly={processing}
           placeholder={t('search.placeholder')}
-          className="w-full bg-transparent pl-10 pr-16 py-3 text-sm outline-none placeholder:text-muted-foreground/35"
+          className={`w-full bg-transparent pl-10 pr-16 py-3 text-sm outline-none placeholder:text-muted-foreground/35 ${
+            processing ? 'cursor-not-allowed text-muted-foreground' : ''
+          }`}
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          {hint && (
-            <span className="text-[10px] text-muted-foreground/50 hidden sm:inline">{hint}</span>
+          {processing ? (
+            <button
+              type="button"
+              onClick={onAbort}
+              aria-label={t('search.abort')}
+              className="group relative inline-flex items-center justify-center w-7 h-7 rounded-md text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Square size={13} className="fill-current" />
+              <span className="pointer-events-none absolute top-full right-0 mt-2.5 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-[10px] font-medium text-background opacity-0 group-hover:opacity-100 transition-opacity duration-100">
+                {t('search.abort')}
+              </span>
+            </button>
+          ) : (
+            <>
+              {hint && (
+                <span className="text-[10px] text-muted-foreground/50 hidden sm:inline">{hint}</span>
+              )}
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/50 font-mono">
+                <CornerDownLeft size={10} />
+              </kbd>
+            </>
           )}
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/50 font-mono">
-            <CornerDownLeft size={10} />
-          </kbd>
         </div>
       </div>
 
-      {/* Hint bar */}
-      <div className="flex items-center gap-1.5 mt-2 pl-[6px] text-[10px] text-muted-foreground/35">
-        <span>{t('search.hint.keyword')}</span>
-        <span>·</span>
-        <span>{t('search.hint.category')}</span>
-        <span>·</span>
-        <span>{t('search.hint.ai')}</span>
-      </div>
+      {/* Below-box status: processing indicator vs. hint bar */}
+      {processing ? (
+        <div className="flex items-center gap-2 mt-2 pl-[6px] text-[11px] font-medium text-primary">
+          <Loader2 size={12} className="animate-spin" />
+          <span>{t('search.processing')}</span>
+          <span className="flex gap-0.5">
+            <span className="w-1 h-1 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-1 h-1 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-1 h-1 rounded-full bg-primary/60 animate-bounce" />
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 mt-2 pl-[6px] text-[10px] text-muted-foreground/35">
+          <span>{t('search.hint.keyword')}</span>
+          <span>·</span>
+          <span>{t('search.hint.category')}</span>
+          <span>·</span>
+          <span>{t('search.hint.ai')}</span>
+        </div>
+      )}
 
       {/* Dropdown (shared for @ and /) */}
       {dropdown && suggestions.length > 0 && (

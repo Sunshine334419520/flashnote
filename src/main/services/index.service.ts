@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { getDatabase } from '../database/connection'
 import { hashFileContent } from '../utils/hash'
 import { join } from 'path'
+import { AI_COMMAND } from '../../shared/constants'
 import type { Note } from '../../shared/types'
 import type { SearchQuery, SearchResult } from '../../shared/types'
 import type { NoteRow } from '../database/schema'
@@ -21,6 +22,38 @@ export function initIndexService(storagePath: string): void {
 function getDB(): Database.Database {
   if (!db) throw new Error('IndexService not initialized. Call initIndexService() first.')
   return db
+}
+
+// ============================================================
+// Query tokenization (for the trigram FTS index)
+// ============================================================
+
+/**
+ * Split a search string into FTS terms: lowercase, then break on whitespace,
+ * punctuation, and Latin↔CJK boundaries. Keeps Latin words and CJK runs whole —
+ * the trigram tokenizer handles substring matching within each.
+ * e.g. "OpenAi的API Key尾部" → ["openai","的","api","key","尾部"]
+ */
+function tokenizeQuery(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/([a-z0-9])([一-鿿])/g, '$1 $2')
+    .replace(/([一-鿿])([a-z0-9])/g, '$1 $2')
+    .split(/[^a-z0-9一-鿿]+/)
+    .filter(Boolean)
+}
+
+/**
+ * Build an FTS5 MATCH expression from a query. Terms shorter than 3 chars are
+ * dropped (the trigram tokenizer needs ≥3 chars to form a trigram). Returns ''
+ * when nothing is searchable. `op` joins terms: 'OR' for broad recall (candidate
+ * generation), 'AND' for precise search.
+ */
+function ftsMatch(text: string, op: 'AND' | 'OR'): string {
+  return tokenizeQuery(text)
+    .filter((t) => t.length >= 3)
+    .map((t) => `"${t}"`)
+    .join(` ${op} `)
 }
 
 // ============================================================
@@ -288,19 +321,17 @@ export function searchNotes(query: SearchQuery): SearchResult {
     return listNotes(query)
   }
 
-  // Sanitize FTS5 query: escape special characters and use prefix matching
-  const sanitized = query.text
-    .trim()
-    .replace(/['"]/g, '')
-    .split(/\s+/)
-    .map((term) => `"${term}"*`)
-    .join(' AND ')
+  // Trigram FTS: AND-join terms for a precise search (candidate recall uses OR).
+  const match = ftsMatch(query.text, 'AND')
+  if (!match) {
+    return listNotes(query)
+  }
 
   const countResult = db
     .prepare(
       `SELECT COUNT(*) as total FROM notes_fts WHERE notes_fts MATCH ?`
     )
-    .get(sanitized) as { total: number }
+    .get(match) as { total: number }
 
   const rows = db
     .prepare(
@@ -310,7 +341,7 @@ export function searchNotes(query: SearchQuery): SearchResult {
        ORDER BY rank
        LIMIT ? OFFSET ?`
     )
-    .all(sanitized, limit, offset) as NoteRow[]
+    .all(match, limit, offset) as NoteRow[]
 
   return {
     notes: rows.map(rowToNote),
@@ -319,9 +350,51 @@ export function searchNotes(query: SearchQuery): SearchResult {
   }
 }
 
-// ============================================================
-// Helpers
-// ============================================================
+/**
+ * Broad candidate recall for AI semantic search / locate. Unlike searchNotes
+ * (strict AND), this OR-matches terms for high recall, then tops up with recent
+ * published notes when the keyword hit set is thin (semantic queries may share
+ * few literal words). The LLM reranks/filters the returned set downstream.
+ */
+export function recallCandidates(text: string, limit: number): Note[] {
+  const db = getDB()
+  const match = ftsMatch(text, 'OR')
+
+  const rows: NoteRow[] = []
+  const seen = new Set<string>()
+
+  if (match) {
+    const hits = db
+      .prepare(
+        `SELECT n.* FROM notes n
+         JOIN notes_fts fts ON n.rowid = fts.rowid
+         WHERE notes_fts MATCH ? AND n.status = 'published'
+         ORDER BY rank
+         LIMIT ?`
+      )
+      .all(match, limit) as NoteRow[]
+    for (const r of hits) {
+      rows.push(r)
+      seen.add(r.id)
+    }
+  }
+
+  // Top up with recent notes when keyword recall is thin.
+  if (rows.length < AI_COMMAND.RECALL_TOPUP_THRESHOLD) {
+    const recent = db
+      .prepare("SELECT * FROM notes WHERE status = 'published' ORDER BY updated_at DESC LIMIT ?")
+      .all(limit) as NoteRow[]
+    for (const r of recent) {
+      if (rows.length >= limit) break
+      if (!seen.has(r.id)) {
+        rows.push(r)
+        seen.add(r.id)
+      }
+    }
+  }
+
+  return rows.map(rowToNote)
+}
 
 function rowToNote(row: NoteRow): Note {
   const db = getDB()

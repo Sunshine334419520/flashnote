@@ -112,13 +112,41 @@ export function heuristicParse(rawInput: string): SmartParseResult {
 }
 
 /**
+ * A generic single-turn completion request. Used by command execution
+ * (search rerank, delete/edit locate, intent) — distinct from `parse`.
+ */
+export interface AICompletionRequest {
+  system: string
+  user: string
+  /** When true: OpenAI-compatible uses response_format=json_object; Anthropic appends a JSON-only instruction. */
+  json?: boolean
+  /** Override the provider's default max output tokens (parse defaults are small). */
+  maxTokens?: number
+  temperature?: number
+  signal?: AbortSignal
+  /** Command requestId — correlates every step of one command in the logs. */
+  traceId?: string
+  /** Step label for logs, e.g. 'add.parse', 'search.rerank', 'edit.propose'. */
+  label?: string
+}
+
+/** Result of a completion. `finishReason` distinguishes truncation ('length') from a clean stop. */
+export interface AICompletionResult {
+  content: string
+  finishReason?: string
+}
+
+/**
  * Abstract interface for AI providers.
  */
 export interface AIProvider {
   readonly config: AIProviderConfig
 
   /** Smart-parse natural language input into structured note data */
-  parse(rawInput: string): Promise<SmartParseResult>
+  parse(rawInput: string, signal?: AbortSignal): Promise<SmartParseResult>
+
+  /** Generic completion (JSON parsing is the caller's job) */
+  complete(req: AICompletionRequest): Promise<AICompletionResult>
 
   /** Test API connectivity */
   testConnection(): Promise<boolean>

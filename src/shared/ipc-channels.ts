@@ -21,6 +21,11 @@ export const IPC_CHANNELS = {
   // AI — Classification
   AI_PARSE: 'ai:parse',
 
+  // AI — Command execution (search/add/delete/edit)
+  AI_COMMAND_RUN: 'ai:command:run',
+  AI_COMMAND_CANCEL: 'ai:command:cancel',
+  AI_COMMAND_CONFIRM: 'ai:command:confirm',
+
   // Search
   SEARCH_QUERY: 'search:query',
 

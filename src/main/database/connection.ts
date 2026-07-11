@@ -63,6 +63,9 @@ function runMigrations(database: Database.Database): void {
   if (version < 4) {
     applyMigration004(database)
   }
+  if (version < 5) {
+    applyMigration005(database)
+  }
 }
 
 function applyMigration001(database: Database.Database): void {
@@ -188,4 +191,64 @@ function applyMigration004(database: Database.Database): void {
   // Add content column to notes (previously only stored in .md files)
   try { database.exec(`ALTER TABLE notes ADD COLUMN content TEXT NOT NULL DEFAULT ''`) } catch { /* exists */ }
   database.prepare('INSERT INTO _schema_version (version) VALUES (4)').run()
+}
+
+function applyMigration005(database: Database.Database): void {
+  // Rebuild notes_fts with the `trigram` tokenizer so search works for CJK
+  // substrings (unicode61 indexed each CJK run as one token — "身份证" could not
+  // match inside "阳光的身份证号") and for mixed Latin/CJK queries.
+  database.exec(`DROP TRIGGER IF EXISTS notes_ai`)
+  database.exec(`DROP TRIGGER IF EXISTS notes_ad`)
+  database.exec(`DROP TRIGGER IF EXISTS notes_au`)
+  database.exec(`DROP TABLE IF EXISTS notes_fts`)
+
+  database.exec(`
+    CREATE VIRTUAL TABLE notes_fts USING fts5(
+      title,
+      content,
+      tags,
+      category,
+      content='notes',
+      content_rowid='rowid',
+      tokenize='trigram case_sensitive 0'
+    )
+  `)
+
+  // Recreate the same sync triggers (they index title+category; full content/tags
+  // are written by updateFtsContent() on insert/update).
+  database.exec(`
+    CREATE TRIGGER notes_ai AFTER INSERT ON notes BEGIN
+      INSERT INTO notes_fts(rowid, title, content, tags, category)
+      VALUES (new.rowid, new.title, '', '', new.category);
+    END
+  `)
+  database.exec(`
+    CREATE TRIGGER notes_ad AFTER DELETE ON notes BEGIN
+      INSERT INTO notes_fts(notes_fts, rowid, title, content, tags, category)
+      VALUES ('delete', old.rowid, old.title, '', '', old.category);
+    END
+  `)
+  database.exec(`
+    CREATE TRIGGER notes_au AFTER UPDATE ON notes BEGIN
+      INSERT INTO notes_fts(notes_fts, rowid, title, content, tags, category)
+      VALUES ('delete', old.rowid, old.title, '', '', old.category);
+      INSERT INTO notes_fts(rowid, title, content, tags, category)
+      VALUES (new.rowid, new.title, '', '', new.category);
+    END
+  `)
+
+  // Repopulate the index from existing notes + their tags (content column holds
+  // up to the 2000-char preview, which is plenty for search).
+  database.exec(`
+    INSERT INTO notes_fts(rowid, title, content, tags, category)
+    SELECT
+      n.rowid,
+      n.title,
+      n.content,
+      COALESCE((SELECT group_concat(t.name, ' ') FROM note_tags nt JOIN tags t ON nt.tag_id = t.id WHERE nt.note_id = n.id), ''),
+      n.category
+    FROM notes n
+  `)
+
+  database.prepare('INSERT INTO _schema_version (version) VALUES (5)').run()
 }

@@ -40,6 +40,7 @@ export function createNote(request: NoteCreateRequest, classification?: {
   title: string
   sensitive?: boolean
   typedData?: Record<string, unknown>
+  status?: 'draft' | 'published'
 }): Note {
   const root = getStorageRoot()
   const now = new Date().toISOString()
@@ -59,7 +60,7 @@ export function createNote(request: NoteCreateRequest, classification?: {
     updatedAt: now,
     isClassified: !!classification,
     isManuallyEdited: false,
-    status: 'draft'
+    status: classification?.status ?? 'draft'
   }
 
   // Write to disk

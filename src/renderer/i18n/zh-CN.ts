@@ -6,6 +6,26 @@ const zhCN = {
   'search.hint.ai': '/ AI 命令',
   'search.aiMode': 'AI 模式 — Enter 执行',
   'search.filtering': '实时过滤中...',
+  'search.processing': 'AI 处理中',
+  'search.abort': '终止',
+  'search.noResults': '没有匹配的笔记',
+  'search.resultCount': '{n} 条结果',
+  'search.clear': '清除',
+  'search.noProvider': '未配置 AI，请在设置中添加服务商',
+  'search.noTarget': '未找到匹配的笔记',
+  'search.failed': 'AI 处理失败，请重试',
+  'search.retry': '重试',
+
+  // Command confirmation panel
+  'cmdpanel.deleteTitle': '确认删除以下笔记',
+  'cmdpanel.editTitle': '确认修改',
+  'cmdpanel.delete': '删除 {n} 项',
+  'cmdpanel.apply': '应用修改',
+  'cmdpanel.cancel': '取消',
+  'cmdpanel.fieldTitle': '标题',
+  'cmdpanel.fieldContent': '内容',
+  'cmdpanel.fieldTags': '标签',
+  'cmdpanel.fieldCategory': '分类',
 
   // / commands
   'cmd.natural': '自然语言（AI 识别意图）',
