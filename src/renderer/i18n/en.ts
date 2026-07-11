@@ -89,6 +89,41 @@ const en: Translations = {
   'settings.language.en': 'English',
   'settings.language.system': 'System',
 
+  // AI Provider settings
+  'provider.title': 'AI Providers',
+  'provider.subtitle': 'Configure AI models for automatic note classification',
+  'provider.add': 'Add Provider',
+  'provider.empty.title': 'No AI providers configured',
+  'provider.empty.hint': 'Add a provider to enable automatic note classification',
+  'provider.active': 'Active',
+  'provider.setActive': 'Set Active',
+  'provider.test': 'Test',
+  'provider.testing': 'Testing...',
+  'provider.test.success': 'Connection successful!',
+  'provider.test.fail': 'Connection failed — check your API key and network.',
+  'provider.test.error': 'Connection error: ',
+  'provider.edit': 'Edit',
+  'provider.delete': 'Delete',
+  'provider.field.model': 'Model',
+  'provider.field.apiKey': 'API Key',
+  'provider.field.endpoint': 'Endpoint',
+
+  // Provider form
+  'provider.form.addTitle': 'Add Provider',
+  'provider.form.editTitle': 'Edit Provider',
+  'provider.form.type': 'Provider Type',
+  'provider.form.name': 'Display Name',
+  'provider.form.namePlaceholder': 'e.g. "My DeepSeek"',
+  'provider.form.apiKey': 'API Key',
+  'provider.form.apiKeyUnchanged': '(unchanged)',
+  'provider.form.baseURL': 'Base URL',
+  'provider.form.model': 'Model',
+  'provider.form.maxTokens': 'Max Tokens',
+  'provider.form.thinking': 'Deep Think Mode',
+  'provider.form.thinkingHint': "Enables DeepSeek's reasoning chain for better classification at the cost of longer latency",
+  'provider.form.cancel': 'Cancel',
+  'provider.form.save': 'Save Changes',
+
   'quickcapture.placeholder': 'Type and press Enter...',
 }
 

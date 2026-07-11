@@ -87,7 +87,7 @@ const zhCN = {
   'task.count': '共 {n} 项任务',
 
   // Settings
-  'settings.title': 'Settings',
+  'settings.title': '设置',
   'settings.theme': '界面模式',
   'settings.theme.light': '浅色',
   'settings.theme.dark': '深色',
@@ -96,6 +96,41 @@ const zhCN = {
   'settings.language.zhCN': '中文',
   'settings.language.en': 'English',
   'settings.language.system': '跟随系统',
+
+  // AI Provider settings
+  'provider.title': 'AI 服务商',
+  'provider.subtitle': '配置用于笔记自动分类的 AI 模型',
+  'provider.add': '添加服务商',
+  'provider.empty.title': '未配置 AI 服务商',
+  'provider.empty.hint': '添加一个服务商以启用笔记自动分类',
+  'provider.active': '使用中',
+  'provider.setActive': '设为使用中',
+  'provider.test': '测试',
+  'provider.testing': '测试中...',
+  'provider.test.success': '连接成功！',
+  'provider.test.fail': '连接失败 — 请检查 API Key 和网络',
+  'provider.test.error': '连接出错：',
+  'provider.edit': '编辑',
+  'provider.delete': '删除',
+  'provider.field.model': '模型',
+  'provider.field.apiKey': 'API Key',
+  'provider.field.endpoint': '接口地址',
+
+  // Provider form
+  'provider.form.addTitle': '添加服务商',
+  'provider.form.editTitle': '编辑服务商',
+  'provider.form.type': '服务商类型',
+  'provider.form.name': '显示名称',
+  'provider.form.namePlaceholder': '例如「我的 DeepSeek」',
+  'provider.form.apiKey': 'API Key',
+  'provider.form.apiKeyUnchanged': '（保持不变）',
+  'provider.form.baseURL': '接口地址',
+  'provider.form.model': '模型',
+  'provider.form.maxTokens': '最大 Token',
+  'provider.form.thinking': '深度思考模式',
+  'provider.form.thinkingHint': '启用 DeepSeek 推理链，分类更准确但响应更慢',
+  'provider.form.cancel': '取消',
+  'provider.form.save': '保存修改',
 
   // Alt+Space
   'quickcapture.placeholder': '输入内容，Enter 保存...',

@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import type { AIProviderConfig } from '../../../shared/types'
 import { Check, Zap, Trash2, Wrench } from 'lucide-react'
+import { useT } from '../../i18n'
 
 interface ProviderCardProps {
   config: AIProviderConfig
@@ -19,6 +20,7 @@ export function ProviderCard({
   onTest,
   isTesting
 }: ProviderCardProps): ReactElement {
+  const { t } = useT()
   const maskedKey =
     config.apiKey.slice(0, 6) + '...' + config.apiKey.slice(-4)
 
@@ -36,7 +38,7 @@ export function ProviderCard({
           <h3 className="font-semibold text-sm">{config.name}</h3>
           {config.isActive && (
             <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
-              <Zap size={10} /> Active
+              <Zap size={10} /> {t('provider.active')}
             </span>
           )}
         </div>
@@ -48,15 +50,15 @@ export function ProviderCard({
       {/* Info */}
       <div className="space-y-1 text-xs text-muted-foreground">
         <div className="flex justify-between">
-          <span>Model</span>
+          <span>{t('provider.field.model')}</span>
           <span className="text-foreground/70 font-mono text-[11px]">{config.model}</span>
         </div>
         <div className="flex justify-between">
-          <span>API Key</span>
+          <span>{t('provider.field.apiKey')}</span>
           <span className="text-foreground/70 font-mono text-[11px]">{maskedKey}</span>
         </div>
         <div className="flex justify-between">
-          <span>Endpoint</span>
+          <span>{t('provider.field.endpoint')}</span>
           <span className="text-foreground/70 font-mono text-[11px] truncate max-w-[200px]">
             {config.baseURL}
           </span>
@@ -70,7 +72,7 @@ export function ProviderCard({
             onClick={onSetActive}
             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
           >
-            <Check size={12} /> Set Active
+            <Check size={12} /> {t('provider.setActive')}
           </button>
         )}
         <button
@@ -83,19 +85,19 @@ export function ProviderCard({
           ) : (
             <Zap size={11} />
           )}
-          {isTesting ? 'Testing...' : 'Test'}
+          {isTesting ? t('provider.testing') : t('provider.test')}
         </button>
         <button
           onClick={onEdit}
           className="p-1.5 rounded-lg text-[11px] text-muted-foreground hover:bg-muted transition-colors"
-          title="Edit"
+          title={t('provider.edit')}
         >
           <Wrench size={12} />
         </button>
         <button
           onClick={onDelete}
           className="p-1.5 rounded-lg text-[11px] text-muted-foreground hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950 transition-colors"
-          title="Delete"
+          title={t('provider.delete')}
         >
           <Trash2 size={12} />
         </button>

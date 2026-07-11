@@ -134,8 +134,8 @@ function hideQuickCaptureWindow(): void {
 
 function createSettingsWindow(): void {
   settingsWindow = new BrowserWindow({
-    width: 700,
-    height: 560,
+    width: 720,
+    height: 640,
     backgroundColor: getThemeBackgroundColor(),
     icon: nativeImage.createFromPath(ICONS.dock),
     ...windowFrameOptions(),

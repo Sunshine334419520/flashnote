@@ -10,15 +10,20 @@ export function SettingsView(): ReactElement {
   const { t } = useT()
 
   return (
-    <div className="h-screen bg-background overflow-y-auto">
-      <div className="pt-8 pb-4 px-8 border-b border-border">
+    <div className="h-screen flex flex-col bg-background">
+      {/* Fixed, draggable header — reserves space for the macOS traffic lights so
+          scrolling content never slides under the window buttons. */}
+      <div className="shrink-0 drag-region pt-10 pb-4 px-8 border-b border-border">
         <h1 className="text-base font-semibold text-foreground">{t('settings.title')}</h1>
       </div>
-      <ThemeSelector theme={theme} onChange={setTheme} />
-      <div className="border-t border-border" />
-      <LanguageSelector />
-      <div className="border-t border-border" />
-      <AIProviderSettings />
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto">
+        <ThemeSelector theme={theme} onChange={setTheme} />
+        <div className="border-t border-border" />
+        <LanguageSelector />
+        <div className="border-t border-border" />
+        <AIProviderSettings />
+      </div>
     </div>
   )
 }

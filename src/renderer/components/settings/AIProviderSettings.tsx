@@ -4,6 +4,7 @@ import { ProviderCard } from './ProviderCard'
 import { ProviderForm } from './ProviderForm'
 import { Plus, Server } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useT } from '../../i18n'
 
 export function AIProviderSettings(): ReactElement {
   const [providers, setProviders] = useState<AIProviderConfig[]>([])
@@ -12,6 +13,7 @@ export function AIProviderSettings(): ReactElement {
   const [editingProvider, setEditingProvider] = useState<AIProviderConfig | null>(null)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const { t } = useT()
 
   const fetchProviders = useCallback(async () => {
     try {
@@ -87,16 +89,16 @@ export function AIProviderSettings(): ReactElement {
         const ok = await window.electronAPI.ai.providers.test(id)
         setTestResult(
           ok
-            ? { ok: true, msg: 'Connection successful!' }
-            : { ok: false, msg: 'Connection failed — check your API key and network.' }
+            ? { ok: true, msg: t('provider.test.success') }
+            : { ok: false, msg: t('provider.test.fail') }
         )
       } catch (err) {
-        setTestResult({ ok: false, msg: 'Connection error: ' + (err as Error).message })
+        setTestResult({ ok: false, msg: t('provider.test.error') + (err as Error).message })
       } finally {
         setTestingId(null)
       }
     },
-    []
+    [t]
   )
 
   // Auto-dismiss the test result banner after 3s
@@ -121,9 +123,9 @@ export function AIProviderSettings(): ReactElement {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">AI Providers</h1>
+          <h1 className="text-xl font-bold">{t('provider.title')}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Configure AI models for automatic note classification
+            {t('provider.subtitle')}
           </p>
         </div>
         <button
@@ -131,7 +133,7 @@ export function AIProviderSettings(): ReactElement {
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           <Plus size={16} />
-          Add Provider
+          {t('provider.add')}
         </button>
       </div>
 
@@ -154,9 +156,9 @@ export function AIProviderSettings(): ReactElement {
       {providers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Server size={40} className="mb-3 opacity-30" />
-          <p className="text-sm font-medium">No AI providers configured</p>
+          <p className="text-sm font-medium">{t('provider.empty.title')}</p>
           <p className="text-xs mt-1 opacity-60">
-            Add a provider to enable automatic note classification
+            {t('provider.empty.hint')}
           </p>
         </div>
       ) : (

@@ -2,6 +2,7 @@ import { type ReactElement, useState, useEffect } from 'react'
 import type { AIProviderConfig, AIProviderType } from '../../../shared/types'
 import { BUILTIN_PROVIDER_PRESETS } from '../../../shared/constants'
 import { X } from 'lucide-react'
+import { useT } from '../../i18n'
 
 interface ProviderFormProps {
   mode: 'add' | 'edit'
@@ -32,6 +33,7 @@ export function ProviderForm({
   const [model, setModel] = useState(initial?.model ?? '')
   const [maxTokens, setMaxTokens] = useState(initial?.maxTokens ?? 300)
   const [thinking, setThinking] = useState(initial?.thinking ?? 'disabled')
+  const { t } = useT()
 
   // Auto-fill from preset when type changes
   useEffect(() => {
@@ -65,14 +67,14 @@ export function ProviderForm({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md bg-card rounded-2xl shadow-2xl border p-6 space-y-4"
+        className="w-full max-w-md bg-card rounded-2xl shadow-2xl border p-6 space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">
-            {mode === 'add' ? 'Add Provider' : 'Edit Provider'}
+            {mode === 'add' ? t('provider.form.addTitle') : t('provider.form.editTitle')}
           </h2>
           <button
             type="button"
@@ -85,7 +87,7 @@ export function ProviderForm({
 
         {/* Type selector */}
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Provider Type</span>
+          <span className="text-xs font-medium text-muted-foreground">{t('provider.form.type')}</span>
           <select
             value={type}
             onChange={(e) => setType(e.target.value as AIProviderType)}
@@ -101,12 +103,12 @@ export function ProviderForm({
 
         {/* Name */}
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Display Name</span>
+          <span className="text-xs font-medium text-muted-foreground">{t('provider.form.name')}</span>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder='e.g. "My DeepSeek"'
+            placeholder={t('provider.form.namePlaceholder')}
             className="w-full bg-muted/50 rounded-xl px-3 py-2 text-sm outline-none border border-transparent focus:border-primary/30"
             autoFocus
           />
@@ -114,19 +116,19 @@ export function ProviderForm({
 
         {/* API Key */}
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">API Key</span>
+          <span className="text-xs font-medium text-muted-foreground">{t('provider.form.apiKey')}</span>
           <input
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder={mode === 'edit' ? '(unchanged)' : 'sk-...'}
+            placeholder={mode === 'edit' ? t('provider.form.apiKeyUnchanged') : 'sk-...'}
             className="w-full bg-muted/50 rounded-xl px-3 py-2 text-sm font-mono outline-none border border-transparent focus:border-primary/30"
           />
         </label>
 
         {/* Base URL */}
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Base URL</span>
+          <span className="text-xs font-medium text-muted-foreground">{t('provider.form.baseURL')}</span>
           <input
             type="text"
             value={baseURL}
@@ -140,7 +142,7 @@ export function ProviderForm({
         {/* Model + Max Tokens */}
         <div className="grid grid-cols-3 gap-3">
           <label className="col-span-2 space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Model</span>
+            <span className="text-xs font-medium text-muted-foreground">{t('provider.form.model')}</span>
             <input
               type="text"
               value={model}
@@ -150,7 +152,7 @@ export function ProviderForm({
             />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Max Tokens</span>
+            <span className="text-xs font-medium text-muted-foreground">{t('provider.form.maxTokens')}</span>
             <input
               type="number"
               value={maxTokens}
@@ -166,17 +168,17 @@ export function ProviderForm({
         {type === 'deepseek' && (
           <label className="flex items-center justify-between bg-muted/30 rounded-xl px-4 py-3">
             <div>
-              <span className="text-sm font-medium">Deep Think Mode</span>
+              <span className="text-sm font-medium">{t('provider.form.thinking')}</span>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Enables DeepSeek's reasoning chain for better classification at the cost of longer latency
+                {t('provider.form.thinkingHint')}
               </p>
             </div>
             <button
               type="button"
               onClick={() =>
-                setThinking((t) => (t === 'enabled' ? 'disabled' : 'enabled'))
+                setThinking((prev) => (prev === 'enabled' ? 'disabled' : 'enabled'))
               }
-              className={`relative w-10 h-5 rounded-full transition-colors ${
+              className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-3 ${
                 thinking === 'enabled' ? 'bg-primary' : 'bg-muted-foreground/30'
               }`}
             >
@@ -196,14 +198,14 @@ export function ProviderForm({
             onClick={onCancel}
             className="flex-1 px-4 py-2 rounded-xl text-sm font-medium bg-muted/50 hover:bg-muted transition-colors"
           >
-            Cancel
+            {t('provider.form.cancel')}
           </button>
           <button
             type="submit"
             disabled={!canSave}
             className="flex-1 px-4 py-2 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors"
           >
-            {mode === 'add' ? 'Add Provider' : 'Save Changes'}
+            {mode === 'add' ? t('provider.form.addTitle') : t('provider.form.save')}
           </button>
         </div>
       </form>
