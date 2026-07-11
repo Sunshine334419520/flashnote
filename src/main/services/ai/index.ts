@@ -139,11 +139,23 @@ export class AIService {
     })
     try {
       const res = await provider.complete({ ...req, signal })
+      const usage = res.usage as
+        | {
+            prompt_tokens?: number
+            completion_tokens?: number
+            total_tokens?: number
+            completion_tokens_details?: { reasoning_tokens?: number }
+          }
+        | undefined
       logger.info('ai:complete', 'response', {
         req: req.traceId,
         step: req.label,
         elapsedMs: Date.now() - start,
         finishReason: res.finishReason,
+        // reasoningTokens > 0 means thinking mode actually ran; 0 / undefined = off.
+        reasoningTokens: usage?.completion_tokens_details?.reasoning_tokens,
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
         chars: res.content.length,
         preview: maskSecrets(res.content).slice(0, AI_LOG_PREVIEW_LENGTH)
       })

@@ -53,7 +53,11 @@ export class AnthropicProvider implements AIProvider {
     const textBlock = response.content.find(
       (block): block is Anthropic.TextBlock => block.type === 'text'
     )
-    return { content: textBlock?.text ?? '', finishReason: response.stop_reason ?? undefined }
+    return {
+      content: textBlock?.text ?? '',
+      finishReason: response.stop_reason ?? undefined,
+      usage: response.usage as unknown as Record<string, unknown>
+    }
   }
 
   async testConnection(): Promise<boolean> {

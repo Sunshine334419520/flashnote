@@ -134,6 +134,8 @@ export interface AICompletionRequest {
 export interface AICompletionResult {
   content: string
   finishReason?: string
+  /** Raw provider usage object (token counts, incl. DeepSeek reasoning_tokens). */
+  usage?: Record<string, unknown>
 }
 
 /**

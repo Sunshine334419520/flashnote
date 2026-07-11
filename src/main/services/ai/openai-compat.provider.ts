@@ -51,9 +51,12 @@ export class OpenAICompatibleProvider implements AIProvider {
     }
     if (opts.json) body.response_format = { type: 'json_object' }
 
-    // DeepSeek thinking mode
-    if (this.config.thinking === 'enabled') {
-      body.thinking = { type: 'enabled' }
+    // DeepSeek v4 defaults thinking to ENABLED when the field is absent, so an
+    // explicit type (including 'disabled') is required to honor the config —
+    // otherwise "disabled" silently runs with reasoning on. The param is
+    // DeepSeek-specific, so only send it to deepseek providers.
+    if (this.config.type === 'deepseek' && this.config.thinking) {
+      body.thinking = { type: this.config.thinking }
     }
 
     const response = await fetch(url, {
@@ -76,7 +79,8 @@ export class OpenAICompatibleProvider implements AIProvider {
     const data = (await response.json()) as OpenAIResponse
     return {
       content: data.choices?.[0]?.message?.content ?? '',
-      finishReason: data.choices?.[0]?.finish_reason
+      finishReason: data.choices?.[0]?.finish_reason,
+      usage: data.usage
     }
   }
 
@@ -104,5 +108,6 @@ export class OpenAICompatibleProvider implements AIProvider {
 
 interface OpenAIResponse {
   choices?: Array<{ message?: { content?: string }; finish_reason?: string }>
+  usage?: Record<string, unknown>
   error?: { message: string; type: string }
 }
