@@ -1,6 +1,6 @@
 ---
-name: do-release
-description: Publish a new FlashNote release — version bump → push tag → GitHub Actions builds. Publish a new FlashNote release — version bump → push tag → GitHub Actions builds for all platforms.
+name: flashnote-push
+description: Publish a new FlashNote release — version bump → push tag → GitHub Actions builds.
 ---
 
 # Release
