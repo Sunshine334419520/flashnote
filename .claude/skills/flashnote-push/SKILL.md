@@ -77,11 +77,62 @@ git push --follow-tags
 GitHub Actions picks up tags matching `v*` and starts building macOS/Windows/Linux packages.
 Beta tags (`v*-beta*`) are marked as **pre-release** on GitHub Release.
 
-## Step 5 — Verify
+## Step 5 — Monitor CI build (background)
 
-Tell the user to check:
-- GitHub Actions: `https://github.com/Sunshine334419520/flashnote/actions`
-- GitHub Release: `https://github.com/Sunshine334419520/flashnote/releases`
+After pushing the tag, start a background monitor to watch the workflow:
+
+### 5a. Find the workflow run
+
+```bash
+curl -s "https://api.github.com/repos/Sunshine334419520/flashnote/actions/runs?event=push&per_page=1" \
+  | python3 -c "import json,sys; runs=json.load(sys.stdin)['workflow_runs']; print(runs[0]['id'] if runs else '')"
+```
+
+### 5b. Start background monitor
+
+Use the `Monitor` tool with this polling script (runs every 30s until all jobs complete):
+
+```bash
+RUN_ID="<from step 5a>"
+while true; do
+  DATA=$(curl -s "https://api.github.com/repos/Sunshine334419520/flashnote/actions/runs/$RUN_ID/jobs")
+  STATUS=$(echo "$DATA" | python3 -c "
+import json,sys
+jobs=json.load(sys.stdin)['jobs']
+for j in jobs:
+    print(f'{j[\"name\"]}: {j[\"status\"]} ({j.get(\"conclusion\",\"-\")})')
+")
+  echo "$STATUS"
+
+  # Check if all jobs have a conclusion
+  ALL_DONE=$(echo "$DATA" | python3 -c "
+import json,sys
+jobs=json.load(sys.stdin)['jobs']
+all_done = all(j.get('conclusion') is not None for j in jobs)
+print('yes' if all_done else 'no')
+")
+  [ "$ALL_DONE" = "yes" ] && break
+  sleep 30
+done
+```
+
+Monitor settings:
+- `description`: "CI build for v<VERSION>"
+- `persistent`: false (stops when all jobs complete)
+
+### 5c. When build completes
+
+Check the releases API for the published artifacts:
+
+```bash
+curl -s "https://api.github.com/repos/Sunshine334419520/flashnote/releases/tags/v<VERSION>" \
+  | python3 -c "import json,sys; r=json.load(sys.stdin); print(r.get('html_url','Not found'))"
+```
+
+Report to the user:
+- ✅ Success: all 3 jobs passed → send `PushNotification` with download links
+- ❌ Failure: which job failed → send `PushNotification` with error + Actions link
+- Also provide the direct `https://github.com/Sunshine334419520/flashnote/releases/tag/v<VERSION>` link
 
 ## Notes
 
