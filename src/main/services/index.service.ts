@@ -34,7 +34,7 @@ function getDB(): Database.Database {
  * the trigram tokenizer handles substring matching within each.
  * e.g. "OpenAi的API Key尾部" → ["openai","的","api","key","尾部"]
  */
-function tokenizeQuery(text: string): string[] {
+export function tokenizeQuery(text: string): string[] {
   return text
     .toLowerCase()
     .replace(/([a-z0-9])([一-鿿])/g, '$1 $2')
@@ -49,7 +49,7 @@ function tokenizeQuery(text: string): string[] {
  * when nothing is searchable. `op` joins terms: 'OR' for broad recall (candidate
  * generation), 'AND' for precise search.
  */
-function ftsMatch(text: string, op: 'AND' | 'OR'): string {
+export function ftsMatch(text: string, op: 'AND' | 'OR'): string {
   return tokenizeQuery(text)
     .filter((t) => t.length >= 3)
     .map((t) => `"${t}"`)

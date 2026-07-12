@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 // Import from the anthropic provider since extractJSON lives there
-import { extractJSON } from '@services/ai/anthropic.provider'
+import { extractJSON } from '@utils/extract-json'
 
 describe('extractJSON', () => {
   it('parses plain JSON', () => {
