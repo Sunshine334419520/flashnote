@@ -35,19 +35,19 @@ export function TagEditor({ tags, onChange }: TagEditorProps): ReactElement {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground"
+          className="inline-flex items-center gap-1 text-caption px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground"
         >
           {tag}
           <button
             onClick={() => removeTag(tag)}
             className="hover:text-foreground transition-colors"
           >
-            <X size={10} />
+            <X size={12} />
           </button>
         </span>
       ))}
-      <div className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border border-dashed border-border/50 text-muted-foreground/50">
-        <Plus size={10} />
+      <div className="inline-flex items-center gap-1 text-caption px-2 py-0.5 rounded-md border border-dashed border-border/50 text-muted-foreground/50">
+        <Plus size={12} />
         <input
           type="text"
           value={input}

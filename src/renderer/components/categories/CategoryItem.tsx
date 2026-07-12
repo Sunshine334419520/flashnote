@@ -13,7 +13,7 @@ export function CategoryItem({ name, count, isActive, onClick }: CategoryItemPro
     <button
       onClick={onClick}
       className={cn(
-        'w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-sm transition-colors text-left',
+        'w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-body transition-colors text-left',
         isActive
           ? 'bg-primary/10 text-primary font-medium'
           : 'text-foreground/80 hover:bg-muted/50'
@@ -22,7 +22,7 @@ export function CategoryItem({ name, count, isActive, onClick }: CategoryItemPro
       <span className="truncate">{name}</span>
       <span
         className={cn(
-          'text-[11px] rounded-full px-1.5 py-0.5 min-w-[20px] text-center',
+          'text-caption rounded-full px-1.5 py-0.5 min-w-[20px] text-center',
           isActive ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
         )}
       >

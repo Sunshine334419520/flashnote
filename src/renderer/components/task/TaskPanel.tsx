@@ -8,7 +8,7 @@ export function TaskPanel(): ReactElement {
 
   if (tasks.length === 0) {
     return (
-      <div className="flex items-center justify-center py-8 text-muted-foreground/50 text-xs">
+      <div className="flex items-center justify-center py-8 text-muted-foreground/50 text-label">
         <ListChecks size={16} className="mr-2 opacity-40" />
         No tasks yet
       </div>

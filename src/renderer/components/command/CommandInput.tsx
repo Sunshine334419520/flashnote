@@ -242,7 +242,7 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
           onBlur={() => setHint(null)}
           readOnly={processing}
           placeholder={t('search.placeholder')}
-          className={`w-full bg-transparent pl-10 pr-16 py-3 text-sm outline-none placeholder:text-muted-foreground/35 ${
+          className={`w-full bg-transparent pl-10 pr-16 py-3 text-body outline-none placeholder:text-muted-foreground/35 ${
             processing ? 'cursor-not-allowed text-muted-foreground' : ''
           }`}
         />
@@ -254,18 +254,18 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
               aria-label={t('search.abort')}
               className="group relative inline-flex items-center justify-center w-7 h-7 rounded-md text-primary hover:bg-primary/10 transition-colors"
             >
-              <Square size={13} className="fill-current" />
-              <span className="pointer-events-none absolute top-full right-0 mt-2.5 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-[10px] font-medium text-background opacity-0 group-hover:opacity-100 transition-opacity duration-100">
+              <Square size={14} className="fill-current" />
+              <span className="pointer-events-none absolute top-full right-0 mt-2.5 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-micro font-medium text-background opacity-0 group-hover:opacity-100 transition-opacity duration-100">
                 {t('search.abort')}
               </span>
             </button>
           ) : (
             <>
               {hint && (
-                <span className="text-[10px] text-muted-foreground/50 hidden sm:inline">{hint}</span>
+                <span className="text-micro text-muted-foreground/50 hidden sm:inline">{hint}</span>
               )}
-              <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/50 font-mono">
-                <CornerDownLeft size={10} />
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 text-micro px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/50 font-mono">
+                <CornerDownLeft size={12} />
               </kbd>
             </>
           )}
@@ -274,7 +274,7 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
 
       {/* Below-box status: processing indicator vs. hint bar */}
       {processing ? (
-        <div className="flex items-center gap-2 mt-2 pl-[6px] text-[11px] font-medium text-primary">
+        <div className="flex items-center gap-2 mt-2 pl-[6px] text-caption font-medium text-primary">
           <Loader2 size={12} className="animate-spin" />
           <span>{t('search.processing')}</span>
           <span className="flex gap-0.5">
@@ -284,7 +284,7 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
           </span>
         </div>
       ) : (
-        <div className="flex items-center gap-1.5 mt-2 pl-[6px] text-[10px] text-muted-foreground/35">
+        <div className="flex items-center gap-1.5 mt-2 pl-[6px] text-micro text-muted-foreground/35">
           <span>{t('search.hint.keyword')}</span>
           <span>·</span>
           <span>{t('search.hint.category')}</span>
@@ -306,28 +306,28 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
                 else handleSelectSlash(s as CommandDef)
               }}
               onMouseEnter={() => setHighlightedIdx(i)}
-              className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2 ${
+              className={`w-full text-left px-4 py-2 text-body transition-colors flex items-center gap-2 ${
                 i === highlightedIdx ? 'bg-muted' : 'hover:bg-muted/50'
               }`}
             >
               {dropdown === 'slash' ? (
                 <>
-                  <span className="font-medium text-sm shrink-0 w-20">
+                  <span className="font-medium text-body shrink-0 w-20">
                     {(s as CommandDef).name || '/'}
                   </span>
-                  <span className="text-[12px] text-muted-foreground flex-1">
+                  <span className="text-label text-muted-foreground flex-1">
                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {t((s as CommandDef).label as any)}
                   </span>
                   {(s as CommandDef).alias && (
-                    <span className="text-[10px] text-muted-foreground/40 font-mono shrink-0">
+                    <span className="text-micro text-muted-foreground/40 font-mono shrink-0">
                       {(s as CommandDef).alias}
                     </span>
                   )}
                 </>
               ) : (
                 <>
-                  <span className="text-[11px] text-muted-foreground shrink-0">
+                  <span className="text-caption text-muted-foreground shrink-0">
                     {(s as string).length > 20 ? '📝' : '📁'}
                   </span>
                   <span className="truncate">{s as string}</span>

@@ -70,11 +70,11 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
             <input
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className="flex-1 text-sm font-medium bg-muted/50 rounded-lg px-2 py-1 outline-none border border-border focus:border-primary/30"
+              className="flex-1 text-body font-medium bg-muted/50 rounded-lg px-2 py-1 outline-none border border-border focus:border-primary/30"
               autoFocus
             />
           ) : (
-            <span className="text-sm font-medium flex-1 truncate">{note.title}</span>
+            <span className="text-body font-medium flex-1 truncate">{note.title}</span>
           )}
           <button
             onClick={onClose}
@@ -88,17 +88,17 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
         <div className="flex-1 overflow-y-auto p-4">
           {confirming ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground mb-3">{t('confirm.delete')}</p>
+              <p className="text-body text-muted-foreground mb-3">{t('confirm.delete')}</p>
               <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={() => setConfirming(false)}
-                  className="text-xs px-4 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
+                  className="text-label px-4 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
                 >
                   {t('confirm.cancel')}
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="text-xs px-4 py-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  className="text-label px-4 py-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
                 >
                   {t('confirm.ok')}
                 </button>
@@ -108,10 +108,10 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full min-h-[200px] text-sm bg-muted/30 rounded-xl px-3 py-2 outline-none border border-border focus:border-primary/30 resize-none leading-relaxed"
+              className="w-full min-h-[200px] text-body bg-muted/30 rounded-xl px-3 py-2 outline-none border border-border focus:border-primary/30 resize-none leading-relaxed"
             />
           ) : (
-            <div className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+            <div className="text-body text-foreground leading-relaxed whitespace-pre-line">
               {note.content}
             </div>
           )}
@@ -119,7 +119,7 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
 
         {/* Footer */}
         <div className="flex items-center justify-between p-4 border-t border-border shrink-0">
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-2 text-caption text-muted-foreground">
             <span>{note.category}</span>
             <span>·</span>
             <span>{timeStr}</span>
@@ -129,13 +129,13 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
               <>
                 <button
                   onClick={() => { setEditing(false); setConfirming(false) }}
-                  className="text-[11px] px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
+                  className="text-caption px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
                 >
                   {t('confirm.cancel')}
                 </button>
                 <button
                   onClick={handleSave}
-                  className="text-[11px] px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  className="text-caption px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                   {t('card.save')}
                 </button>
@@ -145,7 +145,7 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
                 <button
                   onClick={handleCopy}
                   className={cn(
-                    'flex items-center gap-1 text-[11px] px-2 py-1.5 rounded-lg transition-colors',
+                    'flex items-center gap-1 text-caption px-2 py-1.5 rounded-lg transition-colors',
                     copied
                       ? 'text-type-text bg-type-text/10'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -156,13 +156,13 @@ export function LongTextModal({ note, onClose, onUpdate, onDelete }: Props): Rea
                 </button>
                 <button
                   onClick={() => setEditing(true)}
-                  className="flex items-center gap-1 text-[11px] px-2 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className="flex items-center gap-1 text-caption px-2 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <Pencil size={12} /> {t('card.edit')}
                 </button>
                 <button
                   onClick={() => setConfirming(true)}
-                  className="flex items-center gap-1 text-[11px] px-2 py-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                  className="flex items-center gap-1 text-caption px-2 py-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
                 >
                   <Trash2 size={12} /> {t('card.delete')}
                 </button>

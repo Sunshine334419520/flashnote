@@ -73,7 +73,7 @@ export function ProviderForm({
         className="w-full max-w-md bg-card rounded-2xl shadow-2xl border p-6 space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">
+          <h2 className="text-heading font-bold">
             {mode === 'add' ? t('provider.form.addTitle') : t('provider.form.editTitle')}
           </h2>
           <button
@@ -81,17 +81,17 @@ export function ProviderForm({
             onClick={onCancel}
             className="p-1 rounded-lg hover:bg-muted transition-colors"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Type selector */}
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">{t('provider.form.type')}</span>
+          <span className="text-label font-medium text-muted-foreground">{t('provider.form.type')}</span>
           <select
             value={type}
             onChange={(e) => setType(e.target.value as AIProviderType)}
-            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-sm outline-none border border-transparent focus:border-primary/30"
+            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-body outline-none border border-transparent focus:border-primary/30"
           >
             {Object.entries(TYPE_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -103,38 +103,38 @@ export function ProviderForm({
 
         {/* Name */}
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">{t('provider.form.name')}</span>
+          <span className="text-label font-medium text-muted-foreground">{t('provider.form.name')}</span>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t('provider.form.namePlaceholder')}
-            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-sm outline-none border border-transparent focus:border-primary/30"
+            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-body outline-none border border-transparent focus:border-primary/30"
             autoFocus
           />
         </label>
 
         {/* API Key */}
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">{t('provider.form.apiKey')}</span>
+          <span className="text-label font-medium text-muted-foreground">{t('provider.form.apiKey')}</span>
           <input
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder={mode === 'edit' ? t('provider.form.apiKeyUnchanged') : 'sk-...'}
-            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-sm font-mono outline-none border border-transparent focus:border-primary/30"
+            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-body font-mono outline-none border border-transparent focus:border-primary/30"
           />
         </label>
 
         {/* Base URL */}
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">{t('provider.form.baseURL')}</span>
+          <span className="text-label font-medium text-muted-foreground">{t('provider.form.baseURL')}</span>
           <input
             type="text"
             value={baseURL}
             onChange={(e) => setBaseURL(e.target.value)}
             placeholder="https://api.example.com/v1"
-            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-sm font-mono outline-none border border-transparent focus:border-primary/30"
+            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-body font-mono outline-none border border-transparent focus:border-primary/30"
             disabled={type !== 'custom'}
           />
         </label>
@@ -142,24 +142,24 @@ export function ProviderForm({
         {/* Model + Max Tokens */}
         <div className="grid grid-cols-3 gap-3">
           <label className="col-span-2 space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">{t('provider.form.model')}</span>
+            <span className="text-label font-medium text-muted-foreground">{t('provider.form.model')}</span>
             <input
               type="text"
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="model-name"
-              className="w-full bg-muted/50 rounded-xl px-3 py-2 text-sm outline-none border border-transparent focus:border-primary/30"
+              className="w-full bg-muted/50 rounded-xl px-3 py-2 text-body outline-none border border-transparent focus:border-primary/30"
             />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">{t('provider.form.maxTokens')}</span>
+            <span className="text-label font-medium text-muted-foreground">{t('provider.form.maxTokens')}</span>
             <input
               type="number"
               value={maxTokens}
               onChange={(e) => setMaxTokens(Number(e.target.value))}
               min={50}
               max={4096}
-              className="w-full bg-muted/50 rounded-xl px-3 py-2 text-sm outline-none border border-transparent focus:border-primary/30"
+              className="w-full bg-muted/50 rounded-xl px-3 py-2 text-body outline-none border border-transparent focus:border-primary/30"
             />
           </label>
         </div>
@@ -168,8 +168,8 @@ export function ProviderForm({
         {type === 'deepseek' && (
           <label className="flex items-center justify-between bg-muted/30 rounded-xl px-4 py-3">
             <div>
-              <span className="text-sm font-medium">{t('provider.form.thinking')}</span>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <span className="text-body font-medium">{t('provider.form.thinking')}</span>
+              <p className="text-caption text-muted-foreground mt-0.5">
                 {t('provider.form.thinkingHint')}
               </p>
             </div>
@@ -196,14 +196,14 @@ export function ProviderForm({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-2 rounded-xl text-sm font-medium bg-muted/50 hover:bg-muted transition-colors"
+            className="flex-1 px-4 py-2 rounded-xl text-body font-medium bg-muted/50 hover:bg-muted transition-colors"
           >
             {t('provider.form.cancel')}
           </button>
           <button
             type="submit"
             disabled={!canSave}
-            className="flex-1 px-4 py-2 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors"
+            className="flex-1 px-4 py-2 rounded-xl text-body font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors"
           >
             {mode === 'add' ? t('provider.form.addTitle') : t('provider.form.save')}
           </button>

@@ -58,13 +58,13 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
     <div className="rounded-2xl border border-border bg-card p-4 space-y-3 card-hover">
       {/* Header */}
       <div className="flex items-center gap-2 min-w-0">
-        <Key size={15} className="text-type-apikey shrink-0" />
+        <Key size={16} className="text-type-apikey shrink-0" />
         {editing ? (
           <input
             ref={titleInputRef}
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
-            className="flex-1 text-sm font-medium bg-muted/50 rounded-lg px-2 py-1 outline-none border border-border focus:border-ring/30 min-w-0"
+            className="flex-1 text-body font-medium bg-muted/50 rounded-lg px-2 py-1 outline-none border border-border focus:border-ring/30 min-w-0"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSave()
               if (e.key === 'Escape') handleCancel()
@@ -72,14 +72,14 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
           />
         ) : (
           <>
-            <span className="text-sm font-medium truncate flex-1">{note.title}</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-type-apikey/10 text-type-apikey shrink-0 select-none">
+            <span className="text-body font-medium truncate flex-1">{note.title}</span>
+            <span className="text-micro px-1.5 py-0.5 rounded font-medium bg-type-apikey/10 text-type-apikey shrink-0 select-none">
               {t('type.apikey')}
             </span>
           </>
         )}
         {service && !editing && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground shrink-0">
+          <span className="text-micro px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground shrink-0">
             {service}
           </span>
         )}
@@ -88,10 +88,10 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
       {/* Body */}
       {confirming ? (
         <div className="text-center py-2">
-          <p className="text-xs text-muted-foreground mb-2">{t('confirm.delete')}</p>
+          <p className="text-label text-muted-foreground mb-2">{t('confirm.delete')}</p>
           <div className="flex items-center justify-center gap-2">
-            <button onClick={handleCancel} className="text-[11px] px-3 py-1 rounded-lg border border-border hover:bg-muted transition-colors">{t('confirm.cancel')}</button>
-            <button onClick={() => { onDelete?.(note.id); setConfirming(false) }} className="text-[11px] px-3 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors">{t('confirm.ok')}</button>
+            <button onClick={handleCancel} className="text-caption px-3 py-1 rounded-lg border border-border hover:bg-muted transition-colors">{t('confirm.cancel')}</button>
+            <button onClick={() => { onDelete?.(note.id); setConfirming(false) }} className="text-caption px-3 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors">{t('confirm.ok')}</button>
           </div>
         </div>
       ) : editing ? (
@@ -99,17 +99,17 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
           <input
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            className="w-full text-[12px] font-mono bg-muted/50 rounded-lg px-2 py-1.5 outline-none border border-border focus:border-ring/30"
+            className="w-full text-label font-mono bg-muted/50 rounded-lg px-2 py-1.5 outline-none border border-border focus:border-ring/30"
             onKeyDown={(e) => { if (e.key === 'Escape') handleCancel() }}
           />
           <div className="flex items-center justify-end gap-2">
-            <button onClick={handleCancel} className="text-[11px] px-3 py-1 rounded-lg border border-border hover:bg-muted transition-colors">{t('confirm.cancel')}</button>
-            <button onClick={handleSave} className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">{t('card.save')}</button>
+            <button onClick={handleCancel} className="text-caption px-3 py-1 rounded-lg border border-border hover:bg-muted transition-colors">{t('confirm.cancel')}</button>
+            <button onClick={handleSave} className="text-caption px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">{t('card.save')}</button>
           </div>
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <code className={`flex-1 text-[12px] font-mono text-muted-foreground bg-muted/30 rounded-lg px-2 py-1.5 select-all ${note.sensitive && !revealed ? 'truncate' : 'break-all whitespace-normal'}`}>
+          <code className={`flex-1 text-label font-mono text-muted-foreground bg-muted/30 rounded-lg px-2 py-1.5 select-all ${note.sensitive && !revealed ? 'truncate' : 'break-all whitespace-normal'}`}>
             {note.sensitive && !revealed ? masked : note.content}
           </code>
           <button
@@ -127,7 +127,7 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
         <>
           <div className="border-t border-border/60" />
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground min-w-0">
+            <div className="flex items-center gap-2 text-micro text-muted-foreground min-w-0">
               <span className="truncate">{note.category}</span>
               <span>·</span>
               <span className="shrink-0">{timeAgo}</span>
@@ -136,18 +136,18 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
               <button
                 onClick={handleCopy}
                 className={cn(
-                  'flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md transition-colors',
+                  'flex items-center gap-1 text-micro px-1.5 py-1 rounded-md transition-colors',
                   copied ? 'text-type-apikey bg-type-apikey/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 )}
               >
-                {copied ? <Check size={11} /> : <Copy size={11} />}
+                {copied ? <Check size={12} /> : <Copy size={12} />}
                 {copied ? t('card.copied') : t('card.copy')}
               </button>
-              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                <Pencil size={11} /> {t('card.edit')}
+              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-micro px-1.5 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                <Pencil size={12} /> {t('card.edit')}
               </button>
-              <button onClick={() => setConfirming(true)} className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
-                <Trash2 size={11} /> {t('card.delete')}
+              <button onClick={() => setConfirming(true)} className="flex items-center gap-1 text-micro px-1.5 py-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
+                <Trash2 size={12} /> {t('card.delete')}
               </button>
             </div>
           </div>

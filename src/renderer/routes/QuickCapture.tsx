@@ -58,7 +58,7 @@ export function QuickCapture(): ReactElement {
             }
           }}
           placeholder="Type your note and press Enter..."
-          className="w-full bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/50 text-foreground"
+          className="w-full bg-transparent text-body outline-none placeholder:text-muted-foreground/50 text-foreground"
           disabled={isSaving}
           autoFocus
           spellCheck={false}

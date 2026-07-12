@@ -14,7 +14,7 @@ export function TaskBar(): ReactElement {
   if (!summary) {
     return (
       <div className="shrink-0 h-8 flex items-center px-6 border-t border-border/40 bg-background/80 backdrop-blur-sm">
-        <span className="text-[10px] text-muted-foreground/35">就绪</span>
+        <span className="text-micro text-muted-foreground/35">就绪</span>
       </div>
     )
   }
@@ -25,7 +25,7 @@ export function TaskBar(): ReactElement {
       <button
         onClick={togglePanel}
         className={cn(
-          'w-full h-8 flex items-center gap-2 px-6 text-[11px] transition-colors',
+          'w-full h-8 flex items-center gap-2 px-6 text-caption transition-colors',
           activeCount > 0
             ? 'bg-primary/5 text-primary'
             : failedCount > 0
@@ -33,14 +33,14 @@ export function TaskBar(): ReactElement {
               : 'text-muted-foreground/50 hover:bg-muted/30'
         )}
       >
-        {activeCount > 0 && <Loader2 size={11} className="animate-spin" />}
-        {activeCount === 0 && failedCount > 0 && <X size={11} />}
-        {activeCount === 0 && failedCount === 0 && <Check size={11} className="text-emerald-500" />}
+        {activeCount > 0 && <Loader2 size={12} className="animate-spin" />}
+        {activeCount === 0 && failedCount > 0 && <X size={12} />}
+        {activeCount === 0 && failedCount === 0 && <Check size={12} className="text-emerald-500" />}
 
         <span className="flex-1 text-left">{summary}</span>
 
         <ChevronUp
-          size={11}
+          size={12}
           className={cn('transition-transform text-muted-foreground/40', isPanelOpen ? 'rotate-0' : 'rotate-180')}
         />
       </button>

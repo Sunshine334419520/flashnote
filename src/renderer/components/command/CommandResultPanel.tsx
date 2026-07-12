@@ -28,21 +28,21 @@ export function CommandResultPanel({ result, applying, onConfirm, onCancel }: Pr
   const { t } = useT()
 
   return (
-    <div className="mt-3 rounded-xl border border-border bg-card p-3 space-y-3 shadow-sm">
+    <div className="rounded-xl border border-border bg-card p-3 space-y-3 shadow-lg max-h-[60vh] overflow-y-auto">
       {result.kind === 'delete_candidates' ? (
         <>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-type-credential">
-            <Trash2 size={13} />
+          <div className="flex items-center gap-1.5 text-label font-medium text-type-credential">
+            <Trash2 size={12} />
             <span>{t('cmdpanel.deleteTitle')}</span>
           </div>
           <ul className="space-y-1.5">
             {result.matches.map((note) => (
-              <li key={note.id} className="flex items-start gap-2 text-sm">
+              <li key={note.id} className="flex items-start gap-2 text-label">
                 <TypeBadge type={note.type} label={t(`type.${note.type}` as never)} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-foreground/90">{note.title}</p>
                   {result.reasons[note.id] && (
-                    <p className="truncate text-[11px] text-muted-foreground/60">{result.reasons[note.id]}</p>
+                    <p className="truncate text-caption text-muted-foreground/60">{result.reasons[note.id]}</p>
                   )}
                 </div>
               </li>
@@ -60,16 +60,16 @@ export function CommandResultPanel({ result, applying, onConfirm, onCancel }: Pr
         </>
       ) : (
         <>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
-            <Pencil size={13} />
+          <div className="flex items-center gap-1.5 text-label font-medium text-primary">
+            <Pencil size={12} />
             <span>{t('cmdpanel.editTitle')}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-label">
             <TypeBadge type={result.target.type} label={t(`type.${result.target.type}` as never)} />
             <span className="truncate text-foreground/90">{result.target.title}</span>
           </div>
           {result.summary && (
-            <p className="text-[12px] text-muted-foreground/70">{result.summary}</p>
+            <p className="text-caption text-muted-foreground/70">{result.summary}</p>
           )}
           <EditDiff target={result.target} proposed={result.proposed} />
           <Actions
@@ -89,7 +89,7 @@ function TypeBadge({ type, label }: { type: NoteType; label: string }): ReactEle
   return (
     <span
       className={cn(
-        'shrink-0 select-none rounded px-1.5 py-0.5 text-[9px] font-medium',
+        'shrink-0 select-none rounded px-1.5 py-0.5 text-micro font-medium',
         TYPE_BADGE[type]
       )}
     >
@@ -109,7 +109,7 @@ function EditDiff({ target, proposed }: { target: Note; proposed: EditProposal }
   return (
     <div className="space-y-2 rounded-lg bg-muted/40 p-2.5">
       {rows.map((row) => (
-        <div key={row.label} className="text-[12px]">
+        <div key={row.label} className="text-label">
           <span className="text-muted-foreground/50">{row.label}</span>
           <div className="mt-0.5 space-y-0.5">
             <p className="truncate text-muted-foreground/50 line-through">{row.from || '—'}</p>
@@ -145,7 +145,7 @@ function Actions({
       <button
         onClick={onCancel}
         disabled={applying}
-        className="rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+        className="rounded-lg px-3 py-1.5 text-label text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
       >
         {cancelLabel}
       </button>
@@ -153,7 +153,7 @@ function Actions({
         onClick={onConfirm}
         disabled={applying || disabled}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50',
+          'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-label font-medium text-white transition-colors disabled:opacity-50',
           destructive ? 'bg-type-credential hover:bg-type-credential/90' : 'bg-primary hover:bg-primary/90'
         )}
       >

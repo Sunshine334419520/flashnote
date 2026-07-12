@@ -13,7 +13,7 @@ export function ThemeSelector({ theme, onChange }: Props): ReactElement {
 
   return (
     <div className="px-8 py-6 space-y-4">
-      <h2 className="text-sm font-medium text-foreground">{t('settings.theme')}</h2>
+      <h2 className="text-body font-medium text-foreground">{t('settings.theme')}</h2>
       <div className="flex gap-2">
         <button
           onClick={() => onChange('light')}
@@ -24,8 +24,8 @@ export function ThemeSelector({ theme, onChange }: Props): ReactElement {
               : 'border-border hover:border-primary/20 hover:bg-muted/50 text-muted-foreground'
           )}
         >
-          <Sun size={18} />
-          <span className="text-[11px] font-medium">{t('settings.theme.light')}</span>
+          <Sun size={16} />
+          <span className="text-caption font-medium">{t('settings.theme.light')}</span>
         </button>
         <button
           onClick={() => onChange('dark')}
@@ -36,8 +36,8 @@ export function ThemeSelector({ theme, onChange }: Props): ReactElement {
               : 'border-border hover:border-primary/20 hover:bg-muted/50 text-muted-foreground'
           )}
         >
-          <Moon size={18} />
-          <span className="text-[11px] font-medium">{t('settings.theme.dark')}</span>
+          <Moon size={16} />
+          <span className="text-caption font-medium">{t('settings.theme.dark')}</span>
         </button>
         <button
           onClick={() => onChange('system')}
@@ -48,8 +48,8 @@ export function ThemeSelector({ theme, onChange }: Props): ReactElement {
               : 'border-border hover:border-primary/20 hover:bg-muted/50 text-muted-foreground'
           )}
         >
-          <Monitor size={18} />
-          <span className="text-[11px] font-medium">{t('settings.theme.system')}</span>
+          <Monitor size={16} />
+          <span className="text-caption font-medium">{t('settings.theme.system')}</span>
         </button>
       </div>
     </div>

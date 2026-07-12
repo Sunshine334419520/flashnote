@@ -76,7 +76,7 @@ export function NoteDetailPanel(): ReactElement {
   if (!displayNote) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground/40">
-        <p className="text-sm">Select a note to view</p>
+        <p className="text-body">Select a note to view</p>
       </div>
     )
   }
@@ -99,12 +99,12 @@ export function NoteDetailPanel(): ReactElement {
                   setIsEditingTitle(false)
                 }
               }}
-              className="flex-1 text-lg font-bold bg-transparent outline-none border-b-2 border-primary"
+              className="flex-1 text-heading font-bold bg-transparent outline-none border-b-2 border-primary"
               autoFocus
             />
           ) : (
             <h2
-              className="text-lg font-bold cursor-text hover:text-primary/80 transition-colors"
+              className="text-heading font-bold cursor-text hover:text-primary/80 transition-colors"
               onClick={() => setIsEditingTitle(true)}
             >
               {displayNote.title}
@@ -115,11 +115,11 @@ export function NoteDetailPanel(): ReactElement {
             className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
             title="Delete note"
           >
-            <Trash2 size={15} />
+            <Trash2 size={16} />
           </button>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 text-label text-muted-foreground">
           <span className="px-2 py-0.5 rounded-md bg-muted/50">{displayNote.category}</span>
           <span>Created {format(new Date(displayNote.createdAt), 'MMM d, yyyy HH:mm')}</span>
           {displayNote.updatedAt !== displayNote.createdAt && (

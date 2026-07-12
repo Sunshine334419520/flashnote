@@ -25,7 +25,7 @@ export function TaskItem({ task }: TaskItemProps): ReactElement {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-4 py-2 text-sm border-b border-border/50 last:border-0',
+        'flex items-center gap-3 px-4 py-2 text-body border-b border-border/50 last:border-0',
         task.status === 'failed' && 'bg-red-50/50 dark:bg-red-950/20'
       )}
     >
@@ -44,17 +44,17 @@ export function TaskItem({ task }: TaskItemProps): ReactElement {
       <div className="flex-1 min-w-0">
         <span className="text-foreground/80 truncate block">{task.rawInput}</span>
         {task.result && (
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-caption text-muted-foreground">
             {task.result.category} · {task.result.tags.join(', ')}
           </span>
         )}
         {task.error && (
-          <span className="text-[11px] text-red-500 truncate block">{task.error}</span>
+          <span className="text-caption text-red-500 truncate block">{task.error}</span>
         )}
       </div>
 
       {/* Time */}
-      <span className="text-[11px] text-muted-foreground/60 shrink-0">
+      <span className="text-caption text-muted-foreground/60 shrink-0">
         {task.status === 'processing'
           ? elapsed
           : task.result

@@ -15,7 +15,7 @@ export function LanguageSelector(): ReactElement {
 
   return (
     <div className="px-8 py-6 space-y-4">
-      <h2 className="text-sm font-medium text-foreground">{t('settings.language')}</h2>
+      <h2 className="text-body font-medium text-foreground">{t('settings.language')}</h2>
       <div className="flex gap-2">
         {OPTIONS.map(({ value, labelKey }) => (
           <button
@@ -29,7 +29,7 @@ export function LanguageSelector(): ReactElement {
             )}
           >
             <Languages size={16} />
-            <span className="text-[11px] font-medium">{t(labelKey)}</span>
+            <span className="text-caption font-medium">{t(labelKey)}</span>
           </button>
         ))}
       </div>

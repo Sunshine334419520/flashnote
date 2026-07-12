@@ -158,36 +158,42 @@ export function MainView(): ReactElement {
       {/* AI Command Bar — draggable region on macOS hiddenInset */}
       <div className="shrink-0 px-24 pt-[46px] pb-[6px] drag-region">
         <div className="no-drag flex items-start gap-3">
-          <div className="flex-1">
-            <CommandInput
-              mode="local"
-              value={searchQuery}
-              onChange={handleInputChange}
-              onCommit={runAICommand}
-              processing={!!processingCmd}
-              onAbort={handleAbort}
-            />
-            {error && (
-              <div className="mt-2 flex items-center gap-2 pl-[6px] text-[11px] text-type-credential">
-                <AlertCircle size={12} className="shrink-0" />
-                <span>{error}</span>
-                <button
-                  onClick={handleRetry}
-                  className="ml-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
-                >
-                  <RotateCw size={11} />
-                  {t('search.retry')}
-                </button>
-              </div>
-            )}
-            {pending && (
-              <CommandResultPanel
-                result={pending}
-                applying={applying}
-                onConfirm={handleConfirm}
-                onCancel={handleCancelPending}
+          <div className="flex-1 min-w-0">
+            {/* Positioning context: overlays float below the input like the / dropdown,
+                so they never push the card wall or widen the page. */}
+            <div className="relative max-w-2xl mx-auto">
+              <CommandInput
+                mode="local"
+                value={searchQuery}
+                onChange={handleInputChange}
+                onCommit={runAICommand}
+                processing={!!processingCmd}
+                onAbort={handleAbort}
               />
-            )}
+              {error && (
+                <div className="absolute top-full left-0 right-0 z-40 mt-2 flex items-center gap-2 pl-[6px] text-caption text-type-credential">
+                  <AlertCircle size={12} className="shrink-0" />
+                  <span className="truncate">{error}</span>
+                  <button
+                    onClick={handleRetry}
+                    className="ml-1 shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    <RotateCw size={12} />
+                    {t('search.retry')}
+                  </button>
+                </div>
+              )}
+              {pending && (
+                <div className="absolute top-full left-0 right-0 z-40 mt-2">
+                  <CommandResultPanel
+                    result={pending}
+                    applying={applying}
+                    onConfirm={handleConfirm}
+                    onCancel={handleCancelPending}
+                  />
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={() => window.electronAPI.window.showSettings()}

@@ -14,7 +14,7 @@ export function SettingsView(): ReactElement {
       {/* Fixed, draggable header — reserves space for the macOS traffic lights so
           scrolling content never slides under the window buttons. */}
       <div className="shrink-0 drag-region pt-10 pb-4 px-8 border-b border-border">
-        <h1 className="text-base font-semibold text-foreground">{t('settings.title')}</h1>
+        <h1 className="text-title font-semibold text-foreground">{t('settings.title')}</h1>
       </div>
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto">

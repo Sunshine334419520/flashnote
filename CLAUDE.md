@@ -132,6 +132,36 @@ try {
 | Bookmark | `217 91% 60%` | `#3B82F6` |
 | Text | `258 90% 65%` | `#8B5CF6` |
 
+## Typography (v2 UI)
+
+Semantic type scale defined as `--text-*` tokens in `globals.css` `@theme` (same pattern as the color tokens). **Use the named sizes — not `text-[Npx]` and not raw `text-xs/sm/base/lg`.**
+
+### Size Scale
+
+| Token | Class | px | Usage |
+|-------|-------|----|-------|
+| micro | `text-micro` | 10 | badges, dot labels |
+| caption | `text-caption` | 11 | meta, secondary labels, hints |
+| label | `text-label` | 12 | form field labels, small UI |
+| body | `text-body` | 14 | default body / content |
+| title | `text-title` | 16 | section & card titles |
+| heading | `text-heading` | 18 | page / modal headings |
+
+### Role → Style (size + weight + color, applied inline)
+
+| Role | Classes |
+|------|---------|
+| Section title (settings section, card-wall group) | `text-body font-medium text-foreground` |
+| Card title | `text-body font-medium` |
+| Body / content | `text-body` |
+| Field label | `text-label text-muted-foreground` |
+| Meta / secondary / hint | `text-caption text-muted-foreground` |
+| Badge / micro | `text-micro font-medium` |
+
+### Icons (lucide `size` prop)
+
+Inline: `12` (small) · `14` (default) · `16` (large). Empty-state illustrations: `40`. Avoid other values.
+
 ## I18n
 
 - Renderer only (CLI stays English). Two languages: `zh-CN` (default), `en`.

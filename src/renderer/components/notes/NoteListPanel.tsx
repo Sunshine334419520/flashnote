@@ -49,8 +49,8 @@ export function NoteListPanel(): ReactElement {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground/60 px-4">
         <FileText size={32} className="mb-2 opacity-40" />
-        <p className="text-sm">No notes</p>
-        <p className="text-xs mt-1 text-center">Press Alt+Space to capture your first note</p>
+        <p className="text-body">No notes</p>
+        <p className="text-label mt-1 text-center">Press Alt+Space to capture your first note</p>
       </div>
     )
   }
@@ -58,7 +58,7 @@ export function NoteListPanel(): ReactElement {
   return (
     <div className="h-full">
       <div className="px-4 py-3 border-b border-border">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-label text-muted-foreground">
           {filteredNotes.length} note{filteredNotes.length !== 1 ? 's' : ''}
         </p>
       </div>

@@ -35,31 +35,31 @@ export function ProviderCard({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-sm">{config.name}</h3>
+          <h3 className="font-semibold text-body">{config.name}</h3>
           {config.isActive && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
-              <Zap size={10} /> {t('provider.active')}
+            <span className="inline-flex items-center gap-1 text-micro px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
+              <Zap size={12} /> {t('provider.active')}
             </span>
           )}
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground uppercase tracking-wider">
+        <span className="text-micro px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground uppercase tracking-wider">
           {config.type}
         </span>
       </div>
 
       {/* Info */}
-      <div className="space-y-1 text-xs text-muted-foreground">
+      <div className="space-y-1 text-label text-muted-foreground">
         <div className="flex justify-between">
           <span>{t('provider.field.model')}</span>
-          <span className="text-foreground/70 font-mono text-[11px]">{config.model}</span>
+          <span className="text-foreground/70 font-mono text-caption">{config.model}</span>
         </div>
         <div className="flex justify-between">
           <span>{t('provider.field.apiKey')}</span>
-          <span className="text-foreground/70 font-mono text-[11px]">{maskedKey}</span>
+          <span className="text-foreground/70 font-mono text-caption">{maskedKey}</span>
         </div>
         <div className="flex justify-between">
           <span>{t('provider.field.endpoint')}</span>
-          <span className="text-foreground/70 font-mono text-[11px] truncate max-w-[200px]">
+          <span className="text-foreground/70 font-mono text-caption truncate max-w-[200px]">
             {config.baseURL}
           </span>
         </div>
@@ -70,7 +70,7 @@ export function ProviderCard({
         {!config.isActive && (
           <button
             onClick={onSetActive}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-caption font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
           >
             <Check size={12} /> {t('provider.setActive')}
           </button>
@@ -78,25 +78,25 @@ export function ProviderCard({
         <button
           onClick={onTest}
           disabled={isTesting}
-          className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] bg-muted/50 text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-caption bg-muted/50 text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
         >
           {isTesting ? (
             <span className="w-3 h-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
           ) : (
-            <Zap size={11} />
+            <Zap size={12} />
           )}
           {isTesting ? t('provider.testing') : t('provider.test')}
         </button>
         <button
           onClick={onEdit}
-          className="p-1.5 rounded-lg text-[11px] text-muted-foreground hover:bg-muted transition-colors"
+          className="p-1.5 rounded-lg text-caption text-muted-foreground hover:bg-muted transition-colors"
           title={t('provider.edit')}
         >
           <Wrench size={12} />
         </button>
         <button
           onClick={onDelete}
-          className="p-1.5 rounded-lg text-[11px] text-muted-foreground hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950 transition-colors"
+          className="p-1.5 rounded-lg text-caption text-muted-foreground hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950 transition-colors"
           title={t('provider.delete')}
         >
           <Trash2 size={12} />

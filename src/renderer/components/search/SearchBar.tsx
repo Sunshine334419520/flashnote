@@ -131,7 +131,7 @@ export function SearchBar({ value, onChange, notes: externalNotes }: SearchBarPr
   return (
     <div className="relative w-full max-w-2xl mx-auto">
       <div className="relative rounded-xl border border-border bg-card glow-amber">
-        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
@@ -141,20 +141,20 @@ export function SearchBar({ value, onChange, notes: externalNotes }: SearchBarPr
           onFocus={handleFocus}
           onBlur={() => setHint(null)}
           placeholder="搜索笔记、输入指令或直接记录..."
-          className="w-full bg-transparent pl-10 pr-16 py-3 text-sm outline-none placeholder:text-muted-foreground/35"
+          className="w-full bg-transparent pl-10 pr-16 py-3 text-body outline-none placeholder:text-muted-foreground/35"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
           {hint && (
-            <span className="text-[10px] text-muted-foreground/50 hidden sm:inline">{hint}</span>
+            <span className="text-micro text-muted-foreground/50 hidden sm:inline">{hint}</span>
           )}
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/50 font-mono">
-            <CornerDownLeft size={10} />
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-micro px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/50 font-mono">
+            <CornerDownLeft size={12} />
           </kbd>
         </div>
       </div>
 
       {/* Hint bar */}
-      <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-muted-foreground/35">
+      <div className="flex items-center justify-center gap-4 mt-2 text-micro text-muted-foreground/35">
         <span>输入关键词实时过滤</span>
         <span>·</span>
         <span>输入完整句子 + Enter = AI 搜索</span>
@@ -174,11 +174,11 @@ export function SearchBar({ value, onChange, notes: externalNotes }: SearchBarPr
                 handleSelectAt(s)
               }}
               onMouseEnter={() => setHighlightedIdx(i)}
-              className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2 ${
+              className={`w-full text-left px-4 py-2 text-body transition-colors flex items-center gap-2 ${
                 i === highlightedIdx ? 'bg-muted' : 'hover:bg-muted/50'
               }`}
             >
-              <span className="text-[11px] text-muted-foreground shrink-0">
+              <span className="text-caption text-muted-foreground shrink-0">
                 {s.length > 20 ? '📝' : '📁'}
               </span>
               <span className="truncate">{s}</span>

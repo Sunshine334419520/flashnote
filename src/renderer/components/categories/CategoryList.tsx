@@ -36,15 +36,15 @@ export function CategoryList({ activeCategory, onSelect }: CategoryListProps): R
     return (
       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/60">
         <FolderOpen size={28} className="mb-2 opacity-40" />
-        <p className="text-xs">No notes yet</p>
-        <p className="text-[11px] mt-0.5">Press Alt+Space to capture</p>
+        <p className="text-label">No notes yet</p>
+        <p className="text-caption mt-0.5">Press Alt+Space to capture</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-0.5">
-      <p className="px-3 mb-1.5 text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
+      <p className="px-3 mb-1.5 text-caption font-medium text-muted-foreground/60 uppercase tracking-wider">
         Categories
       </p>
       {categories.map((cat) => (

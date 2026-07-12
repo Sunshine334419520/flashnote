@@ -16,7 +16,7 @@ export function Sidebar(): ReactElement {
       {/* Header */}
       <div className="px-4 pt-5 pb-3">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-lg font-bold tracking-tight">FlashNote</h1>
+          <h1 className="text-heading font-bold tracking-tight">FlashNote</h1>
           <button
             onClick={() => window.electronAPI.window.showQuickCapture()}
             className="w-7 h-7 flex items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
@@ -40,7 +40,7 @@ export function Sidebar(): ReactElement {
       <div className="px-3 pb-3">
         <button
           onClick={() => setActiveCategory(null)}
-          className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
+          className={`w-full text-left px-3 py-1.5 rounded-lg text-body transition-colors ${
             !activeCategory
               ? 'bg-primary/10 text-primary font-medium'
               : 'text-muted-foreground hover:bg-muted/50'
