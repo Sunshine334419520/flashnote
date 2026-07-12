@@ -147,6 +147,7 @@ const zhCN = {
   'shortcut.recording': '按下组合键...',
   'shortcut.pressKeys': '请按下新的快捷键组合，Esc 取消录制',
   'shortcut.conflict': '快捷键注册失败，可能与其他程序冲突',
+  'shortcut.custom': '自定义...',
 }
 
 export default zhCN

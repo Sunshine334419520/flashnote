@@ -139,6 +139,7 @@ const en: Translations = {
   'shortcut.recording': 'Press keys...',
   'shortcut.pressKeys': 'Press a new key combination, Esc to cancel',
   'shortcut.conflict': 'Failed to register shortcut, may conflict with another app',
+  'shortcut.custom': 'Custom...',
 }
 
 export default en
