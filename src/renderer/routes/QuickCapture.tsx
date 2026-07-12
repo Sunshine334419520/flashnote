@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Loader2,
   CornerDownLeft,
+  Square,
   Eye,
   EyeOff
 } from 'lucide-react'
@@ -64,6 +65,7 @@ export function QuickCapture(): ReactElement {
   const inputRef = useRef<HTMLInputElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const isComposing = useRef(false)
+  const reqIdRef = useRef<string | null>(null)
 
   // Body transparent (frameless window), focus input, set initial size
   useEffect(() => {
@@ -163,12 +165,14 @@ export function QuickCapture(): ReactElement {
     }
 
     // No results → AI intent recognition
+    const reqId = crypto.randomUUID()
+    reqIdRef.current = reqId
     setProcessing(true)
     setStatusMsg(null)
 
     try {
       const result: AICommandResult = await window.electronAPI.aiCommand.run({
-        id: crypto.randomUUID(),
+        id: reqId,
         type: 'search',
         raw: trimmed,
         explicit: false
@@ -190,9 +194,19 @@ export function QuickCapture(): ReactElement {
       console.error('AI command failed:', err)
       setStatusMsg(t('search.failed'))
     } finally {
+      reqIdRef.current = null
       setProcessing(false)
     }
   }, [input, processing, results, selectedIdx, executeAction, t])
+
+  // ── Abort running AI command ──────────────────────────────────────────
+
+  const handleAbort = useCallback(() => {
+    const id = reqIdRef.current
+    if (id) window.electronAPI.aiCommand.cancel(id).catch(() => {})
+    reqIdRef.current = null
+    setProcessing(false)
+  }, [])
 
   // ── Keyboard ───────────────────────────────────────────────────────────
 
@@ -229,7 +243,14 @@ export function QuickCapture(): ReactElement {
   }
 
   const showResults = results.length > 0 && !processing
-  const showHint = !input.trim() && !processing && !statusMsg
+  const hasInput = !!input.trim()
+
+  // Hint text varies by state
+  const hintText: string | null = (() => {
+    if (processing || statusMsg || showResults) return null
+    if (!hasInput) return t('search.hint.keyword') + ' · ' + t('search.hint.category') + ' · ' + t('search.hint.ai')
+    return t('quickcapture.hint.ai')
+  })()
 
   return (
     <div
@@ -257,7 +278,15 @@ export function QuickCapture(): ReactElement {
           spellCheck={false}
         />
         {processing ? (
-          <Loader2 size={16} className="animate-spin text-primary shrink-0" />
+          <button
+            onClick={handleAbort}
+            className="group relative shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-md text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Square size={14} className="fill-current" />
+            <span className="pointer-events-none absolute top-full right-0 mt-2.5 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-micro font-medium text-background opacity-0 group-hover:opacity-100 transition-opacity duration-100">
+              {t('search.abort')}
+            </span>
+          </button>
         ) : input.trim() ? (
           <kbd className="shrink-0 inline-flex items-center gap-0.5 text-micro px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/40 font-mono">
             <CornerDownLeft size={12} />
@@ -360,16 +389,14 @@ export function QuickCapture(): ReactElement {
       )}
 
       {/* ── Bottom hint ──────────────────────────────────────────────── */}
-      {showHint && (
+      {hintText && (
         <>
           <div className="border-t border-border/50" />
           <div
             className="flex items-center gap-1.5 px-4 text-micro text-muted-foreground/30"
             style={{ height: HINT_HEIGHT }}
           >
-            <span>{t('search.hint.keyword')}</span>
-            <span>·</span>
-            <span>{t('search.hint.ai')}</span>
+            <span>{hintText}</span>
           </div>
         </>
       )}
