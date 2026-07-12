@@ -45,6 +45,7 @@ const en: Translations = {
   'time.daysAgo': '{n}d ago',
   'time.weeksAgo': '{n}w ago',
 
+  'card.add': 'New Note',
   'card.save': 'Save',
   'card.copy': 'Copy',
   'card.copied': 'Copied',

@@ -48,6 +48,7 @@ const zhCN = {
   'time.weeksAgo': '{n}周前',
 
   // Card footer actions
+  'card.add': '新建笔记',
   'card.save': '保存',
   'card.copy': '复制',
   'card.copied': '已复制',

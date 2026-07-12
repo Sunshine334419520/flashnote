@@ -9,7 +9,7 @@ import { StatusBar } from '../components/statusbar/StatusBar'
 import { StatusBarItem } from '../components/statusbar/StatusBarItem'
 import { StatusBarPanel } from '../components/statusbar/StatusBarPanel'
 import { AIOperationPanel } from '../components/statusbar/panels/AIOperationPanel'
-import { Settings, AlertCircle, RotateCw, Sparkles } from 'lucide-react'
+import { Settings, AlertCircle, RotateCw, Sparkles, Plus } from 'lucide-react'
 import { useT } from '../i18n'
 import type { Note, AICommandRequest, AICommandResult } from '../../shared/types'
 
@@ -245,6 +245,13 @@ export function MainView(): ReactElement {
               )}
             </div>
           </div>
+          <button
+            onClick={() => window.electronAPI.window.showQuickCapture()}
+            className="shrink-0 mt-1 p-2 rounded-xl text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
+            title={t('card.add')}
+          >
+            <Plus size={16} />
+          </button>
           <button
             onClick={() => window.electronAPI.window.showSettings()}
             className="shrink-0 mt-1 p-2 rounded-xl text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
