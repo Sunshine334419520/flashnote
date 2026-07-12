@@ -84,7 +84,7 @@ export function AIOperationPanel(): ReactElement {
   }
 
   return (
-    <div className="h-[300px]">
+    <div className="min-h-[120px]">
       {display.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground/40 gap-2">
           <Sparkles size={28} className="opacity-30" />

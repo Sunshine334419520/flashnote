@@ -142,6 +142,8 @@ const en: Translations = {
   'shortcut.custom': 'Custom...',
 
   // Status bar
+  'statusbar.ai': 'AI',
+  'statusbar.failed': 'AI · {n} failed',
   'statusbar.aiRecords': 'AI Operations',
   'statusbar.noRecords': 'No AI operations yet',
 }

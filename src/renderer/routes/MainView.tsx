@@ -26,8 +26,6 @@ export function MainView(): ReactElement {
   const { t } = useT()
 
   // Status bar
-  const activePanel = useStatusBarStore((s) => s.activePanel)
-  const addRecord = useStatusBarStore((s) => s.addRecord)
   const failedCount = useStatusBarStore((s) => s.getFailedCount())
 
   // Command lifecycle state
@@ -257,14 +255,9 @@ export function MainView(): ReactElement {
         </div>
       </div>
 
-      {/* Card canvas + panel overlay */}
-      <div className="flex-1 overflow-y-auto relative">
+      {/* Card canvas */}
+      <div className="flex-1 overflow-y-auto">
         <CardWall onUpdate={handleCardUpdate} onDelete={handleCardDelete} />
-        {activePanel === 'ai' && (
-          <StatusBarPanel title={t('statusbar.aiRecords')}>
-            <AIOperationPanel />
-          </StatusBarPanel>
-        )}
       </div>
 
       {/* Status bar */}
@@ -273,9 +266,12 @@ export function MainView(): ReactElement {
           id="ai"
           icon={<Sparkles size={14} />}
           label={t('statusbar.aiRecords')}
+          text={failedCount > 0 ? t('statusbar.failed', { n: failedCount }) : t('statusbar.ai')}
           badge={failedCount}
         >
-          <div />
+          <StatusBarPanel title={t('statusbar.aiRecords')}>
+            <AIOperationPanel />
+          </StatusBarPanel>
         </StatusBarItem>
       </StatusBar>
     </div>

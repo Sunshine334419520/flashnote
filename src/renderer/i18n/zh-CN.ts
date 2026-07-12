@@ -150,6 +150,8 @@ const zhCN = {
   'shortcut.custom': '自定义...',
 
   // Status bar
+  'statusbar.ai': 'AI',
+  'statusbar.failed': 'AI · {n} 失败',
   'statusbar.aiRecords': 'AI 操作记录',
   'statusbar.noRecords': '暂无 AI 操作记录',
 }
