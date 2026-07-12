@@ -185,3 +185,18 @@ Inline: `12` (small) · `14` (default) · `16` (large). Empty-state illustration
 | `refactor` | code restructure |
 | `chore` | tooling, deps, build |
 | `docs` | documentation |
+
+### Branch Naming
+
+`<type>/<short-description>` — kebab-case, English, 2–4 words.
+
+| Prefix | For | Example |
+|--------|-----|---------|
+| `feat/` | new feature | `feat/cloud-sync`, `feat/status-bar` |
+| `fix/` | bug fix | `fix/window-resize`, `fix/ctrl-shortcut` |
+| `refactor/` | code restructure | `refactor/card-components` |
+| `style/` | UI / visual-only | `style/v2-typography` |
+| `docs/` | documentation | `docs/readme`, `docs/screenshots` |
+| `chore/` | tooling, deps, build | `chore/ci-workflow` |
+
+**Workflow:** small changes → commit directly to `main`. Multi-day features → branch → merge back → delete branch. Tag every release with `v<version>`.
