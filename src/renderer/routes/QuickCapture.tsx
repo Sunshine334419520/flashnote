@@ -15,7 +15,9 @@ import {
   Check,
   ExternalLink,
   Loader2,
-  CornerDownLeft
+  CornerDownLeft,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import { useT } from '../i18n'
 import { cn } from '../lib/cn'
@@ -32,12 +34,12 @@ const TYPE_META: Record<NoteType, { icon: typeof Key; color: string; badge: stri
   text: { icon: FileText, color: 'text-type-text', badge: 'bg-type-text/10 text-type-text', labelKey: 'type.text' }
 }
 
-function snippet(note: Note): string {
+function snippet(note: Note, revealed?: boolean): string {
   if (note.type === 'bookmark') {
     const url = (note.typedData as Record<string, string>)?.url ?? note.content
     try { return new URL(url).hostname } catch { return url.slice(0, 60) }
   }
-  if (note.sensitive) return '●'.repeat(12)
+  if (note.sensitive && !revealed) return '●'.repeat(12)
   return note.content.length > 60 ? note.content.slice(0, 60) + '…' : note.content
 }
 
@@ -58,6 +60,7 @@ export function QuickCapture(): ReactElement {
   const [processing, setProcessing] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [revealedId, setRevealedId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const isComposing = useRef(false)
@@ -293,6 +296,7 @@ export function QuickCapture(): ReactElement {
             const Icon = meta.icon
             const isSelected = i === selectedIdx
             const isCopied = copiedId === note.id
+            const isRevealed = revealedId === note.id
 
             return (
               <div
@@ -309,10 +313,29 @@ export function QuickCapture(): ReactElement {
 
                 <div className="flex-1 min-w-0 flex items-center gap-2">
                   <span className="text-body font-medium truncate">{note.title}</span>
-                  <span className="text-caption text-muted-foreground/50 truncate hidden sm:inline">
-                    {snippet(note)}
+                  <span className={cn(
+                    'text-caption text-muted-foreground/50 truncate hidden sm:inline',
+                    note.sensitive && isRevealed && 'font-mono'
+                  )}>
+                    {snippet(note, isRevealed)}
                   </span>
                 </div>
+
+                {/* Reveal toggle for sensitive notes */}
+                {note.sensitive && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setRevealedId(isRevealed ? null : note.id)
+                    }}
+                    className={cn(
+                      'shrink-0 p-0.5 rounded transition-colors',
+                      isRevealed ? 'text-foreground/60' : 'text-muted-foreground/30 hover:text-muted-foreground'
+                    )}
+                  >
+                    {isRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                )}
 
                 <span className={cn('hidden sm:inline shrink-0 text-micro px-1.5 py-0.5 rounded font-medium', meta.badge)}>
                   {t(meta.labelKey as never)}
