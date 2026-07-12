@@ -20,8 +20,8 @@ export function registerWindowIpc(callbacks: WindowCallbacks): void {
   ipcMain.handle(IPC_CHANNELS.WINDOW_SET_SIZE, (event, width: number, height: number) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win && !win.isDestroyed()) {
-      win.setBounds({ width, height })
-      win.center()
+      const [x, y] = win.getPosition()
+      win.setBounds({ x, y, width, height })
     }
   })
 
