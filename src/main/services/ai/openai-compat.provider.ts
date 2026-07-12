@@ -1,7 +1,7 @@
 import type { AIProvider, AICompletionRequest, AICompletionResult } from './base'
 import type { AIProviderConfig, SmartParseResult } from '../../../shared/types'
 import { SMART_PARSE_SYSTEM_PROMPT, buildParseUserMessage } from './prompts'
-import { extractJSON } from './anthropic.provider'
+import { extractJSON } from '../../utils/extract-json'
 
 /**
  * OpenAI-compatible Chat Completions provider.

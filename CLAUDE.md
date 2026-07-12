@@ -8,7 +8,7 @@ FlashNote (闪记) — AI-native note-taking tool. Two interfaces: **CLI** + **D
 
 ```bash
 pnpm dev              # Electron dev (HMR)
-pnpm test             # vitest (58 tests)
+pnpm test             # vitest (56 tests)
 pnpm build            # production build
 pnpm typecheck        # tsc --noEmit all targets
 pnpm rebuild          # electron-rebuild better-sqlite3

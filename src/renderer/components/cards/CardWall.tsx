@@ -152,7 +152,7 @@ export function CardWall({ notes: externalNotes, onUpdate, onDelete }: CardWallP
       <div className="flex flex-col items-center justify-center py-32 text-muted-foreground/40">
         <FileText size={48} className="mb-4 opacity-20" />
         <p className="text-body font-medium text-muted-foreground/50">{t('empty.title')}</p>
-        <p className="text-label mt-1 text-muted-foreground/30">使用 ⌥Space 快速记录，或在顶部搜索框输入内容</p>
+        <p className="text-label mt-1 text-muted-foreground/30">{t('empty.hint')}</p>
       </div>
     )
   }

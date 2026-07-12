@@ -1,6 +1,6 @@
 import { readNote, createNote, modifyNote, removeNote } from '../storage.service'
 import { recallCandidates } from '../index.service'
-import { extractJSON } from './anthropic.provider'
+import { extractJSON } from '../../utils/extract-json'
 import { heuristicParse } from './base'
 import {
   SMART_PARSE_SYSTEM_PROMPT,
