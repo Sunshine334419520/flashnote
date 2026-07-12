@@ -76,6 +76,14 @@ export function QuickCapture(): ReactElement {
     }
   }, [])
 
+  // ── Close on blur (click outside) ────────────────────────────────────
+
+  useEffect(() => {
+    const onBlur = () => window.electronAPI.window.hideQuickCapture()
+    window.addEventListener('blur', onBlur)
+    return () => window.removeEventListener('blur', onBlur)
+  }, [])
+
   // ── Sync window height to content ────────────────────────────────────
 
   useEffect(() => {
@@ -148,7 +156,6 @@ export function QuickCapture(): ReactElement {
     if (results.length > 0 && selectedIdx < results.length) {
       const selected = results[selectedIdx]
       await executeAction(selected)
-      window.electronAPI.window.hideQuickCapture()
       return
     }
 
@@ -175,7 +182,6 @@ export function QuickCapture(): ReactElement {
         setStatusMsg(t('quickcapture.created'))
         setInput('')
         setResults([])
-        setTimeout(() => window.electronAPI.window.hideQuickCapture(), 800)
       }
     } catch (err) {
       console.error('AI command failed:', err)
@@ -296,7 +302,7 @@ export function QuickCapture(): ReactElement {
                   isSelected ? 'bg-muted/70' : 'hover:bg-muted/40'
                 )}
                 style={{ height: ROW_HEIGHT }}
-                onClick={() => { executeAction(note); window.electronAPI.window.hideQuickCapture() }}
+                onClick={() => executeAction(note)}
                 onMouseEnter={() => setSelectedIdx(i)}
               >
                 <Icon size={16} className={cn(meta.color, 'shrink-0', isSelected ? 'opacity-100' : 'opacity-70')} />
