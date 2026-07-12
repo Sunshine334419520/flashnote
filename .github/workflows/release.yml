@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm rebuild
+      - run: pnpm build
+      - run: pnpm package
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.dmg
+          prerelease: ${{ contains(github.ref, 'beta') }}
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm rebuild
+      - run: pnpm build
+      - run: pnpm package
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          prerelease: ${{ contains(github.ref, 'beta') }}
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm rebuild
+      - run: pnpm build
+      - run: pnpm package
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.AppImage
+          prerelease: ${{ contains(github.ref, 'beta') }}
