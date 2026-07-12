@@ -7,11 +7,6 @@ import type { AIOperationRecord } from '../../../../shared/types'
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
-}
-
 function formatTime(iso: string): string {
   const delta = Date.now() - new Date(iso).getTime()
   const sec = Math.floor(delta / 1000)
@@ -107,9 +102,9 @@ export function AIOperationPanel(): ReactElement {
                   </span>
                 </div>
 
-                {/* Duration */}
+                {/* Time */}
                 <span className="shrink-0 text-muted-foreground/40 tabular-nums">
-                  {isProcessing ? '...' : formatDuration(rec.duration)}
+                  {formatTime(rec.createdAt)}
                 </span>
 
                 {/* Retry */}
