@@ -14,6 +14,12 @@ mac:
   target:
     - target: dmg
       arch: [arm64, x64]
+  # Code signing & notarization — requires Apple Developer account ($99/yr).
+  # Uncomment and fill in when available. See docs/macos-signing.md for details.
+  # identity: "Developer ID Application: Your Name (TEAMID)"
+  # hardenedRuntime: true
+  # notarize:
+  #   teamId: "TEAMID"
 
 win:
   target:

@@ -4,7 +4,7 @@ import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { registerAllIpcHandlers } from './ipc'
 import { getDefaultStoragePath, ensureStorageDirectories } from './utils/paths'
-import { loadConfig } from './services/config.service'
+import { loadConfig, getConfig } from './services/config.service'
 import { initStorageService } from './services/storage.service'
 import { AIService } from './services/ai'
 import { AICommandService } from './services/ai/command.service'
@@ -329,7 +329,6 @@ app.whenReady().then(() => {
   _aiService = aiService
 
   // Read hotkey from config (falls back to DEFAULT_HOTKEY on first run)
-  const { getConfig } = require('./services/config.service')
   currentHotkey = getConfig('hotkey') ?? DEFAULT_HOTKEY
 
   registerAllIpcHandlers({
