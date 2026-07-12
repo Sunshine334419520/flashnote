@@ -15,15 +15,15 @@ interface ShortcutOption {
 const RECOMMENDED: ShortcutOption[] = isMac
   ? [
       { key: 'Alt+Space', display: '⌥ Space' },
-      { key: 'Cmd+Shift+Space', display: '⌘ ⇧ Space' },
       { key: 'Ctrl+Space', display: '⌃ Space' },
-      { key: 'Cmd+Shift+J', display: '⌘ ⇧ J' }
+      { key: 'Alt+S', display: '⌥ S' },
+      { key: 'Alt+F', display: '⌥ F' }
     ]
   : [
-      { key: 'Alt+Shift+Space', display: 'Alt+Shift+Space' },
-      { key: 'Alt+Space', display: 'Alt+Space' },
-      { key: 'Ctrl+Shift+Space', display: 'Ctrl+Shift+Space' },
-      { key: 'Ctrl+Shift+J', display: 'Ctrl+Shift+J' }
+      { key: 'Alt+Space', display: 'Alt + Space' },
+      { key: 'Ctrl+Space', display: 'Ctrl + Space' },
+      { key: 'Alt+S', display: 'Alt + S' },
+      { key: 'Alt+Shift+Space', display: 'Alt + Shift + Space' }
     ]
 
 // ── Key event → Electron accelerator string ─────────────────────────────
