@@ -31,9 +31,9 @@ const RECOMMENDED: ShortcutOption[] = isMac
 function keyToAccelerator(e: React.KeyboardEvent): string | null {
   const parts: string[] = []
 
-  if (e.metaKey || e.ctrlKey) {
-    parts.push(isMac ? 'Cmd' : 'Ctrl')
-  }
+  // Meta and Ctrl are distinct — don't merge them
+  if (e.metaKey) parts.push(isMac ? 'Cmd' : 'Super')
+  if (e.ctrlKey) parts.push('Ctrl')
   if (e.altKey) parts.push('Alt')
   if (e.shiftKey) parts.push('Shift')
 
