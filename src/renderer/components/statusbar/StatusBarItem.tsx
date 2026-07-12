@@ -1,4 +1,4 @@
-import { type ReactElement, type ReactNode } from 'react'
+import { type ReactElement, type ReactNode, useEffect, useRef } from 'react'
 import { useStatusBarStore } from '../../stores/statusBarStore'
 import { cn } from '../../lib/cn'
 
@@ -15,10 +15,24 @@ interface Props {
 export function StatusBarItem({ id, icon, label, text, badge, badgeColor = 'bg-type-credential', children }: Props): ReactElement {
   const activePanel = useStatusBarStore((s) => s.activePanel)
   const togglePanel = useStatusBarStore((s) => s.togglePanel)
+  const closePanel = useStatusBarStore((s) => s.closePanel)
   const isActive = activePanel === id
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Close panel on click outside
+  useEffect(() => {
+    if (!isActive) return
+    const onMouseDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        closePanel()
+      }
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [isActive, closePanel])
 
   return (
-    <div className="relative">
+    <div ref={ref} className="relative">
       <button
         onClick={() => togglePanel(id)}
         title={label}

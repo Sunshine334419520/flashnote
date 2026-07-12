@@ -84,9 +84,9 @@ export function AIOperationPanel(): ReactElement {
   }
 
   return (
-    <div className="min-h-[120px]">
+    <div className="min-h-[140px]">
       {display.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground/40 gap-2">
+        <div className="flex flex-col items-center justify-center min-h-[140px] text-muted-foreground/40 gap-2">
           <Sparkles size={28} className="opacity-30" />
           <span className="text-caption">{t('statusbar.noRecords')}</span>
         </div>
