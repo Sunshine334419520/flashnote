@@ -287,9 +287,12 @@ export function QuickCapture(): ReactElement {
             </span>
           </button>
         ) : input.trim() ? (
-          <kbd className="shrink-0 inline-flex items-center gap-0.5 text-micro px-2 py-0.5 rounded-md bg-muted/50 text-muted-foreground/40 font-mono">
-            <CornerDownLeft size={12} />
-          </kbd>
+          <span className="shrink-0 inline-flex items-center gap-1.5">
+            <span className="text-micro font-semibold text-primary/60 tracking-wide">AI</span>
+            <kbd className="inline-flex items-center text-micro px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground/35 font-mono">
+              <CornerDownLeft size={12} />
+            </kbd>
+          </span>
         ) : null}
       </div>
 
