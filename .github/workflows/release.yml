@@ -18,10 +18,8 @@ jobs:
       - run: pnpm rebuild
       - run: pnpm build
       - run: pnpm package
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*.dmg
-          prerelease: ${{ contains(github.ref, 'beta') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   windows:
     runs-on: windows-latest
@@ -36,10 +34,8 @@ jobs:
       - run: pnpm rebuild
       - run: pnpm build
       - run: pnpm package
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*.exe
-          prerelease: ${{ contains(github.ref, 'beta') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   linux:
     runs-on: ubuntu-latest
@@ -54,7 +50,5 @@ jobs:
       - run: pnpm rebuild
       - run: pnpm build
       - run: pnpm package
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*.AppImage
-          prerelease: ${{ contains(github.ref, 'beta') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
