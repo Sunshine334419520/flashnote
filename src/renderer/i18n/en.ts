@@ -127,6 +127,7 @@ const en: Translations = {
   'quickcapture.placeholder': 'Type and press Enter...',
   'quickcapture.created': 'Note created',
   'quickcapture.hint.ai': 'Enter ↵ AI search / create',
+  'quickcapture.hint.navigate': 'Enter ↵ select · ↑↓ navigate · Esc clear',
 }
 
 export default en

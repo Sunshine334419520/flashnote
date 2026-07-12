@@ -243,12 +243,11 @@ export function QuickCapture(): ReactElement {
   }
 
   const showResults = results.length > 0 && !processing
-  const hasInput = !!input.trim()
 
-  // Hint text varies by state
+  // Hint text — always communicates that Enter triggers AI
   const hintText: string | null = (() => {
-    if (processing || statusMsg || showResults) return null
-    if (!hasInput) return t('search.hint.keyword') + ' · ' + t('search.hint.category') + ' · ' + t('search.hint.ai')
+    if (processing || statusMsg) return null
+    if (showResults) return t('quickcapture.hint.navigate')
     return t('quickcapture.hint.ai')
   })()
 

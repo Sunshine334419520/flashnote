@@ -135,6 +135,7 @@ const zhCN = {
   'quickcapture.placeholder': '输入内容，Enter 保存...',
   'quickcapture.created': '笔记已创建',
   'quickcapture.hint.ai': 'Enter ↵ AI 搜索 / 创建',
+  'quickcapture.hint.navigate': 'Enter ↵ 执行 · ↑↓ 导航 · Esc 清除',
 }
 
 export default zhCN
