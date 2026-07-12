@@ -13,19 +13,19 @@ appId: com.flashnote.app
 productName: FlashNote
 
 mac:
-  target: dmg
-  arch: [arm64, x64]    # universal binary
-  icon: assets/icons/icon.icns
+  target:
+    - target: dmg
+      arch: [arm64, x64]    # universal binary
 
 win:
-  target: nsis
-  arch: [x64]
-  icon: assets/icons/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
 
 linux:
-  target: AppImage
-  arch: [x64]
-  icon: assets/icons/icon.png
+  target:
+    - target: AppImage
+      arch: [x64]
 ```
 
 ## macOS Apple Silicon + Intel
