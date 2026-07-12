@@ -132,10 +132,12 @@ const zhCN = {
   'provider.form.cancel': '取消',
   'provider.form.save': '保存修改',
 
-  'quickcapture.placeholder': '输入内容，Enter 保存...',
-  'quickcapture.created': '笔记已创建',
+  'quickcapture.hint.search': '输入搜索',
+  'quickcapture.hint.category': '@ 分类',
   'quickcapture.hint.ai': 'Enter ↵ AI 搜索 / 创建',
   'quickcapture.hint.navigate': 'Enter ↵ 执行 · ↑↓ 导航 · Esc 清除',
+  'quickcapture.placeholder': '输入内容，Enter 保存...',
+  'quickcapture.created': '笔记已创建',
 }
 
 export default zhCN

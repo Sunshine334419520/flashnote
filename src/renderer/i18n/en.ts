@@ -124,10 +124,12 @@ const en: Translations = {
   'provider.form.cancel': 'Cancel',
   'provider.form.save': 'Save Changes',
 
-  'quickcapture.placeholder': 'Type and press Enter...',
-  'quickcapture.created': 'Note created',
+  'quickcapture.hint.search': 'Type to search',
+  'quickcapture.hint.category': '@ category',
   'quickcapture.hint.ai': 'Enter ↵ AI search / create',
   'quickcapture.hint.navigate': 'Enter ↵ select · ↑↓ navigate · Esc clear',
+  'quickcapture.placeholder': 'Type and press Enter...',
+  'quickcapture.created': 'Note created',
 }
 
 export default en
