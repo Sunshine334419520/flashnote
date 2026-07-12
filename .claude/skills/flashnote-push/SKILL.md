@@ -14,7 +14,7 @@ Ask the user which channel to publish:
 | Channel | Tag format | GitHub Release | When |
 |---------|-----------|:---:|------|
 | `stable` (default) | `v0.2.0` | normal | Regular releases |
-| `beta` | `v0.2.0-beta.1` | pre-release | Preview / testing |
+| `beta` | `v0.2.0-beta` | pre-release | Preview / testing |
 
 If the user doesn't specify, default to `stable`.
 
@@ -46,13 +46,20 @@ git log $(git describe --tags --abbrev=0 2>/dev/null || echo HEAD)..HEAD --oneli
 
 ### Beta channel
 
+Beta uses a simple `-beta` suffix, no auto-incrementing counter. Use `pnpm version` with an explicit version string:
+
 | Scenario | Command | Example |
 |----------|---------|---------|
-| First beta of this minor | `pnpm version preminor --preid=beta` | 0.1.0 → 0.2.0-beta.0 |
-| Next beta iteration | `pnpm version prerelease --preid=beta` | 0.2.0-beta.0 → 0.2.0-beta.1 |
-| First beta of a patch | `pnpm version prepatch --preid=beta` | 0.2.0 → 0.2.1-beta.0 |
+| New beta based on next minor | `pnpm version 0.2.0-beta` | 0.1.0 → 0.2.0-beta |
+| Promote beta to stable | `pnpm version 0.2.0` | 0.2.0-beta → 0.2.0 |
 
-**Ask the user to confirm** before proceeding. Show the current version and what the new version will be.
+If the same beta tag already exists and needs a re-release, delete the old tag first:
+
+```bash
+git tag -d v0.2.0-beta && git push origin :refs/tags/v0.2.0-beta
+```
+
+**Ask the user to confirm** the version string before proceeding.
 
 ## Step 3 — Bump version
 
@@ -81,6 +88,6 @@ Tell the user to check:
 - Never skip pre-flight checks
 - If `pnpm version` fails, fix the issue before retrying
 - Version follows SemVer: MAJOR.MINOR.PATCH
-- Beta versions follow SemVer pre-release: MAJOR.MINOR.PATCH-beta.N
-- When ready to promote beta → stable: run `/flashnote-push` in `stable` mode with the same minor/patch version
+- Beta versions use a simple `-beta` suffix: `v0.2.0-beta`
+- Promote beta → stable: run `/flashnote-push` with `stable` channel, using the same version number without `-beta`
 - The status bar in the app auto-displays the version from `package.json`
