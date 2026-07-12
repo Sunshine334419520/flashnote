@@ -132,8 +132,8 @@ const zhCN = {
   'provider.form.cancel': '取消',
   'provider.form.save': '保存修改',
 
-  // Alt+Space
   'quickcapture.placeholder': '输入内容，Enter 保存...',
+  'quickcapture.created': '笔记已创建',
 }
 
 export default zhCN

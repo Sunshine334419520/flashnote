@@ -125,6 +125,7 @@ const en: Translations = {
   'provider.form.save': 'Save Changes',
 
   'quickcapture.placeholder': 'Type and press Enter...',
+  'quickcapture.created': 'Note created',
 }
 
 export default en
