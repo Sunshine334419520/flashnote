@@ -45,7 +45,7 @@ export function StatusBarItem({ id, icon, label, text, badge, badgeColor = 'bg-t
 
       {/* Floating panel — positioned above the icon, left-aligned */}
       {isActive && (
-        <div className="absolute bottom-full left-0 mb-1 w-[260px] bg-card rounded-xl border border-border shadow-lg z-50 flex flex-col overflow-hidden" style={{ maxHeight: '240px' }}>
+        <div className="absolute bottom-full left-0 ml-2 mb-1 w-[260px] bg-card rounded-lg border border-border shadow-lg z-50 flex flex-col overflow-hidden" style={{ maxHeight: '240px' }}>
           {children}
         </div>
       )}
