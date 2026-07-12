@@ -248,7 +248,7 @@ export function QuickCapture(): ReactElement {
   const hintText: string | null = (() => {
     if (processing || statusMsg) return null
     if (showResults) return t('quickcapture.hint.navigate')
-    return t('quickcapture.hint.search') + ' · ' + t('quickcapture.hint.category') + ' · ' + t('quickcapture.hint.ai')
+    return t('quickcapture.hint.ai') + ' · ' + t('quickcapture.hint.search') + ' · ' + t('quickcapture.hint.category')
   })()
 
   return (
