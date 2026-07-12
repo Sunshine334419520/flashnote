@@ -87,7 +87,7 @@ function createMainWindow(): void {
 function createQuickCaptureWindow(): void {
   quickCaptureWindow = new BrowserWindow({
     width: 680,
-    height: 460,
+    height: 90,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',

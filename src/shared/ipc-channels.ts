@@ -37,6 +37,7 @@ export const IPC_CHANNELS = {
   // Window management
   WINDOW_SHOW_QUICK_CAPTURE: 'window:show-quick-capture',
   WINDOW_HIDE_QUICK_CAPTURE: 'window:hide-quick-capture',
+  WINDOW_SET_SIZE: 'window:set-size',
   WINDOW_SHOW_MAIN: 'window:show-main',
   WINDOW_SHOW_SETTINGS: 'window:show-settings',
 
