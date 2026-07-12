@@ -1,6 +1,7 @@
 appId: com.flashnote.app
 productName: FlashNote
 copyright: Copyright © 2025
+icon: assets/icons/v2/icon_dock_512x512.png
 
 directories:
   output: dist
@@ -23,3 +24,5 @@ linux:
   target:
     - target: AppImage
       arch: [x64]
+  category: Utility
+  syncDesktopName: true
