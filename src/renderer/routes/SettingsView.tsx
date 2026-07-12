@@ -32,11 +32,11 @@ export function SettingsView(): ReactElement {
       </div>
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto">
-        <ShortcutSelector current={hotkey} onChange={handleHotkeyChange} />
-        <div className="border-t border-border" />
         <ThemeSelector theme={theme} onChange={setTheme} />
         <div className="border-t border-border" />
         <LanguageSelector />
+        <div className="border-t border-border" />
+        <ShortcutSelector current={hotkey} onChange={handleHotkeyChange} />
         <div className="border-t border-border" />
         <AIProviderSettings />
       </div>
