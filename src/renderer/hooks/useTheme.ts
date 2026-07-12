@@ -27,8 +27,8 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void } {
       setThemeState(t)
       applyTheme(t)
       localStorage.setItem('flashnote-theme', t)
-    }).catch(() => {
-      // settings not available (mock mode) — use system default
+    }).catch((err) => {
+      console.error('Failed to load theme from settings:', err)
       applyTheme('system')
     })
   }, [])
@@ -63,7 +63,7 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void } {
     setThemeState(t)
     applyTheme(t)
     localStorage.setItem('flashnote-theme', t)
-    window.electronAPI.settings.set('theme', t).catch(() => {})
+    window.electronAPI.settings.set('theme', t).catch((err) => console.error('Failed to save theme:', err))
   }, [])
 
   return { theme, setTheme }

@@ -64,7 +64,7 @@ export function I18nProvider({ children }: Props): ReactNode {
         : 'system') as Language
       setLanguageState(l)
       localStorage.setItem('flashnote-language', l)
-    }).catch(() => {})
+    }).catch((err) => console.error('Failed to load language from settings:', err))
 
     // 3. Listen for cross-window changes
     const unsub = window.electronAPI.on('event:settings-changed', (data: unknown) => {
@@ -83,7 +83,7 @@ export function I18nProvider({ children }: Props): ReactNode {
   const setLanguage = useCallback((l: Language) => {
     setLanguageState(l)
     localStorage.setItem('flashnote-language', l)
-    window.electronAPI.settings.set('language', l).catch(() => {})
+    window.electronAPI.settings.set('language', l).catch((err) => console.error('Failed to save language:', err))
   }, [])
 
   const resolved = resolveLanguage(language)

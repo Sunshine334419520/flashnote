@@ -70,7 +70,10 @@ export class OpenAICompatibleProvider implements AIProvider {
     })
 
     if (!response.ok) {
-      const errorBody = await response.text().catch(() => '')
+      const errorBody = await response.text().catch((err) => {
+        console.debug('Failed to read error response body:', err)
+        return ''
+      })
       throw new Error(
         `AI API error: ${response.status} ${response.statusText}${errorBody ? ` — ${errorBody}` : ''}`
       )

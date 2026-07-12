@@ -227,4 +227,8 @@ export class AIService {
         throw new Error(`Unknown provider type: ${config.type}`)
     }
   }
+
+  close(): void {
+    this.cache.close()
+  }
 }

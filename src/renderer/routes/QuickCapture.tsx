@@ -222,7 +222,7 @@ export function QuickCapture(): ReactElement {
 
   const handleAbort = useCallback(() => {
     const id = reqIdRef.current
-    if (id) window.electronAPI.aiCommand.cancel(id).catch(() => {})
+    if (id) window.electronAPI.aiCommand.cancel(id).catch((err) => console.debug('Cancel AI command:', err))
     reqIdRef.current = null
     setProcessing(false)
   }, [])

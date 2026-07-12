@@ -10,6 +10,7 @@ import { AIService } from './services/ai'
 import { AICommandService } from './services/ai/command.service'
 import { TaskManager } from './services/task-manager'
 import { initLogger, logger } from './utils/logger'
+import { closeDatabase } from './database/connection'
 import { DEFAULT_HOTKEY } from '../shared/constants'
 
 let mainWindow: BrowserWindow | null = null
@@ -325,6 +326,7 @@ function initServices(): { storagePath: string; aiService: AIService; aiCommandS
 
 app.whenReady().then(() => {
   const { storagePath, aiService, aiCommandService, taskManager } = initServices()
+  _aiService = aiService
 
   // Read hotkey from config (falls back to DEFAULT_HOTKEY on first run)
   const { getConfig } = require('./services/config.service')
@@ -356,6 +358,9 @@ app.whenReady().then(() => {
   registerGlobalShortcut(currentHotkey)
 })
 
+// Keep service references for cleanup on quit
+let _aiService: AIService | null = null
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
@@ -364,6 +369,8 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
+  _aiService?.close()
+  try { closeDatabase() } catch { /* already closed */ }
 })
 
 app.on('activate', () => {

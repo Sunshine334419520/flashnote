@@ -3,6 +3,9 @@ import { join } from 'path'
 import { hashContent } from '../../utils/hash'
 import type { SmartParseResult } from '../../../shared/types'
 
+const MAX_AGE = 30 * 24 * 60 * 60 * 1000 // 30 days TTL
+const MAX_ROWS = 1024
+
 export class AICache {
   private db: Database.Database
 
@@ -38,6 +41,12 @@ export class AICache {
 
     if (!row) return null
 
+    // TTL check: expire entries older than 30 days
+    if (Date.now() - new Date(row.created_at).getTime() > MAX_AGE) {
+      this.db.prepare('DELETE FROM parse_cache WHERE content_hash = ?').run(hash)
+      return null
+    }
+
     this.db
       .prepare('UPDATE parse_cache SET hit_count = hit_count + 1 WHERE content_hash = ?')
       .run(hash)
@@ -56,6 +65,17 @@ export class AICache {
 
   set(rawInput: string, result: SmartParseResult): void {
     const hash = hashContent(rawInput)
+
+    // Capacity check: trim oldest entries when over limit
+    const { count } = this.db
+      .prepare('SELECT COUNT(*) as count FROM parse_cache')
+      .get() as { count: number }
+    if (count >= MAX_ROWS) {
+      this.db
+        .prepare('DELETE FROM parse_cache WHERE content_hash IN (SELECT content_hash FROM parse_cache ORDER BY created_at ASC LIMIT ?)')
+        .run(Math.ceil(MAX_ROWS * 0.1)) // delete oldest 10%
+    }
+
     this.db
       .prepare(`
         INSERT OR REPLACE INTO parse_cache
