@@ -128,6 +128,17 @@ export type AICommandConfirmResult =
   | { kind: 'deleted'; count: number }
   | { kind: 'edited'; note: Note }
 
+/** Persistent record of an AI operation shown in the status bar panel. */
+export interface AIOperationRecord {
+  id: string
+  type: 'search' | 'add' | 'delete' | 'edit'
+  raw: string
+  status: 'success' | 'failed' | 'processing'
+  error?: string
+  duration: number
+  createdAt: string
+}
+
 // ============================================================
 // Search types
 // ============================================================

@@ -1,14 +1,17 @@
 import { type ReactElement, useEffect, useState, useCallback, useRef } from 'react'
 import { useNoteStore } from '../stores/noteStore'
-import { useTaskStore } from '../stores/taskStore'
+import { useStatusBarStore } from '../stores/statusBarStore'
 import { CommandInput } from '../components/command/CommandInput'
 import type { AICommand } from '../components/command/CommandInput'
 import { CommandResultPanel } from '../components/command/CommandResultPanel'
 import { CardWall } from '../components/cards/CardWall'
-import { TaskBar } from '../components/task/TaskBar'
-import { Settings, AlertCircle, RotateCw } from 'lucide-react'
+import { StatusBar } from '../components/statusbar/StatusBar'
+import { StatusBarItem } from '../components/statusbar/StatusBarItem'
+import { StatusBarPanel } from '../components/statusbar/StatusBarPanel'
+import { AIOperationPanel } from '../components/statusbar/panels/AIOperationPanel'
+import { Settings, AlertCircle, RotateCw, Sparkles } from 'lucide-react'
 import { useT } from '../i18n'
-import type { Note, TaskInfo, AICommandRequest, AICommandResult } from '../../shared/types'
+import type { Note, AICommandRequest, AICommandResult } from '../../shared/types'
 
 /** delete/edit results await a second-phase confirmation. */
 type PendingResult = Extract<AICommandResult, { kind: 'delete_candidates' } | { kind: 'edit_preview' }>
@@ -20,10 +23,12 @@ export function MainView(): ReactElement {
   const setSearchResult = useNoteStore((s) => s.setSearchResult)
   const updateNote = useNoteStore((s) => s.updateNote)
   const deleteNote = useNoteStore((s) => s.deleteNote)
-  const addTask = useTaskStore((s) => s.addTask)
-  const updateTask = useTaskStore((s) => s.updateTask)
-  const fetchTasks = useTaskStore((s) => s.fetchTasks)
   const { t } = useT()
+
+  // Status bar
+  const activePanel = useStatusBarStore((s) => s.activePanel)
+  const addRecord = useStatusBarStore((s) => s.addRecord)
+  const failedCount = useStatusBarStore((s) => s.getFailedCount())
 
   // Command lifecycle state
   const [processingCmd, setProcessingCmd] = useState<AICommand | null>(null)
@@ -37,7 +42,6 @@ export function MainView(): ReactElement {
   // Initial data load
   useEffect(() => {
     fetchNotes()
-    fetchTasks()
   }, [])
 
   // Real-time IPC events
@@ -47,11 +51,8 @@ export function MainView(): ReactElement {
     })
     const c2 = window.electronAPI.on('event:note-updated', () => fetchNotes())
     const c3 = window.electronAPI.on('event:note-deleted', () => fetchNotes())
-    const c4 = window.electronAPI.on('event:task-created', (tk: unknown) => addTask(tk as TaskInfo))
-    const c5 = window.electronAPI.on('event:task-completed', (tk: unknown) => updateTask(tk as TaskInfo))
-    const c6 = window.electronAPI.on('event:task-failed', (tk: unknown) => updateTask(tk as TaskInfo))
-    return () => { c1(); c2(); c3(); c4(); c5(); c6() }
-  }, [fetchNotes, addTask, updateTask])
+    return () => { c1(); c2(); c3() }
+  }, [fetchNotes])
 
   const toErrorMessage = useCallback((err: unknown): string => {
     const msg = err instanceof Error ? err.message : String(err)
@@ -72,6 +73,8 @@ export function MainView(): ReactElement {
     setProcessingCmd(cmd)
 
     const req: AICommandRequest = { id: requestId, type: cmd.type, raw: cmd.raw, explicit: cmd.explicit }
+    const startedAt = Date.now()
+
     try {
       const result = await window.electronAPI.aiCommand.run(req)
       if (controller.signal.aborted) return
@@ -85,11 +88,33 @@ export function MainView(): ReactElement {
         setError(t('search.noTarget'))
       } else {
         setPending(result)
+        return // wait for confirm
       }
+
+      // Track success
+      useStatusBarStore.getState().addRecord({
+        id: requestId,
+        type: cmd.type,
+        raw: cmd.raw,
+        status: 'success',
+        duration: Date.now() - startedAt,
+        createdAt: new Date().toISOString()
+      })
     } catch (err) {
       if (controller.signal.aborted) return
       console.error('AI command failed:', err)
       setError(toErrorMessage(err))
+
+      // Track failure
+      useStatusBarStore.getState().addRecord({
+        id: requestId,
+        type: cmd.type,
+        raw: cmd.raw,
+        status: 'failed',
+        error: err instanceof Error ? err.message : String(err),
+        duration: Date.now() - startedAt,
+        createdAt: new Date().toISOString()
+      })
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null
@@ -121,11 +146,31 @@ export function MainView(): ReactElement {
     if (!pending) return
     setApplying(true)
     setError(null)
+    const startedAt = Date.now()
+    const confirmId = crypto.randomUUID()
+
     try {
       if (pending.kind === 'delete_candidates') {
-        await window.electronAPI.aiCommand.confirm({ type: 'delete', noteIds: pending.matches.map((n) => n.id) })
+        const noteIds = pending.matches.map((n) => n.id)
+        await window.electronAPI.aiCommand.confirm({ type: 'delete', noteIds })
+        useStatusBarStore.getState().addRecord({
+          id: confirmId,
+          type: 'delete',
+          raw: noteIds.join(', '),
+          status: 'success',
+          duration: Date.now() - startedAt,
+          createdAt: new Date().toISOString()
+        })
       } else {
         await window.electronAPI.aiCommand.confirm({ type: 'edit', noteId: pending.target.id, proposed: pending.proposed })
+        useStatusBarStore.getState().addRecord({
+          id: confirmId,
+          type: 'edit',
+          raw: pending.target.title,
+          status: 'success',
+          duration: Date.now() - startedAt,
+          createdAt: new Date().toISOString()
+        })
       }
       setPending(null)
       setSearchQuery('')
@@ -133,6 +178,15 @@ export function MainView(): ReactElement {
     } catch (err) {
       console.error('Confirm failed:', err)
       setError(toErrorMessage(err))
+      useStatusBarStore.getState().addRecord({
+        id: confirmId,
+        type: pending.kind === 'delete_candidates' ? 'delete' : 'edit',
+        raw: pending.kind === 'delete_candidates' ? pending.matches.map((n) => n.id).join(', ') : pending.target.title,
+        status: 'failed',
+        error: err instanceof Error ? err.message : String(err),
+        duration: Date.now() - startedAt,
+        createdAt: new Date().toISOString()
+      })
     } finally {
       setApplying(false)
     }
@@ -159,8 +213,6 @@ export function MainView(): ReactElement {
       <div className="shrink-0 px-24 pt-[46px] pb-[6px] drag-region">
         <div className="no-drag flex items-start gap-3">
           <div className="flex-1 min-w-0">
-            {/* Positioning context: overlays float below the input like the / dropdown,
-                so they never push the card wall or widen the page. */}
             <div className="relative max-w-2xl mx-auto">
               <CommandInput
                 mode="local"
@@ -205,13 +257,27 @@ export function MainView(): ReactElement {
         </div>
       </div>
 
-      {/* Card canvas */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Card canvas + panel overlay */}
+      <div className="flex-1 overflow-y-auto relative">
         <CardWall onUpdate={handleCardUpdate} onDelete={handleCardDelete} />
+        {activePanel === 'ai' && (
+          <StatusBarPanel title={t('statusbar.aiRecords')}>
+            <AIOperationPanel />
+          </StatusBarPanel>
+        )}
       </div>
 
       {/* Status bar */}
-      <TaskBar />
+      <StatusBar>
+        <StatusBarItem
+          id="ai"
+          icon={<Sparkles size={14} />}
+          label={t('statusbar.aiRecords')}
+          badge={failedCount}
+        >
+          <div />
+        </StatusBarItem>
+      </StatusBar>
     </div>
   )
 }

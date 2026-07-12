@@ -140,6 +140,10 @@ const en: Translations = {
   'shortcut.pressKeys': 'Press a new key combination, Esc to cancel',
   'shortcut.conflict': 'Failed to register shortcut, may conflict with another app',
   'shortcut.custom': 'Custom...',
+
+  // Status bar
+  'statusbar.aiRecords': 'AI Operations',
+  'statusbar.noRecords': 'No AI operations yet',
 }
 
 export default en

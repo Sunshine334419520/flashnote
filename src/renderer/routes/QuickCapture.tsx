@@ -23,6 +23,7 @@ import {
 import { useT } from '../i18n'
 import { cn } from '../lib/cn'
 import { ICONS } from '../assets/iconAssets'
+import { useStatusBarStore } from '../stores/statusBarStore'
 import type { Note, NoteType, AICommandResult } from '../../shared/types'
 
 // ── Type metadata ─────────────────────────────────────────────────────────
@@ -169,6 +170,7 @@ export function QuickCapture(): ReactElement {
     reqIdRef.current = reqId
     setProcessing(true)
     setStatusMsg(null)
+    const startedAt = Date.now()
 
     try {
       const result: AICommandResult = await window.electronAPI.aiCommand.run({
@@ -185,14 +187,31 @@ export function QuickCapture(): ReactElement {
         } else {
           setStatusMsg(t('search.noResults'))
         }
+        useStatusBarStore.getState().addRecord({
+          id: reqId, type: 'search', raw: trimmed,
+          status: 'success', duration: Date.now() - startedAt,
+          createdAt: new Date().toISOString()
+        })
       } else if (result.kind === 'add') {
         setStatusMsg(t('quickcapture.created'))
         setInput('')
         setResults([])
+        useStatusBarStore.getState().addRecord({
+          id: reqId, type: 'add', raw: trimmed,
+          status: 'success', duration: Date.now() - startedAt,
+          createdAt: new Date().toISOString()
+        })
       }
     } catch (err) {
       console.error('AI command failed:', err)
       setStatusMsg(t('search.failed'))
+      useStatusBarStore.getState().addRecord({
+        id: reqId, type: 'search', raw: trimmed,
+        status: 'failed',
+        error: err instanceof Error ? err.message : String(err),
+        duration: Date.now() - startedAt,
+        createdAt: new Date().toISOString()
+      })
     } finally {
       reqIdRef.current = null
       setProcessing(false)
