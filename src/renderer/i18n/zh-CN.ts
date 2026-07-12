@@ -138,6 +138,15 @@ const zhCN = {
   'quickcapture.hint.navigate': 'Enter ↵ 执行 · ↑↓ 导航 · Esc 清除',
   'quickcapture.placeholder': '输入内容，Enter 保存...',
   'quickcapture.created': '笔记已创建',
+
+  // Shortcut settings
+  'shortcut.title': '快捷键',
+  'shortcut.subtitle': '设置 Alt+Space 快捷窗口的全局快捷键',
+  'shortcut.current': '当前快捷键',
+  'shortcut.recommended': '推荐快捷键',
+  'shortcut.recording': '按下组合键...',
+  'shortcut.pressKeys': '请按下新的快捷键组合，Esc 取消录制',
+  'shortcut.conflict': '快捷键注册失败，可能与其他程序冲突',
 }
 
 export default zhCN

@@ -1,13 +1,27 @@
-import type { ReactElement } from 'react'
+import { type ReactElement, useState, useEffect, useCallback } from 'react'
 import { AIProviderSettings } from '../components/settings/AIProviderSettings'
 import { ThemeSelector } from '../components/settings/ThemeSelector'
 import { LanguageSelector } from '../components/settings/LanguageSelector'
+import { ShortcutSelector } from '../components/settings/ShortcutSelector'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n'
 
 export function SettingsView(): ReactElement {
   const { theme, setTheme } = useTheme()
   const { t } = useT()
+  const [hotkey, setHotkey] = useState('')
+
+  useEffect(() => {
+    window.electronAPI.settings.get('hotkey').then((v) => {
+      if (typeof v === 'string' && v) setHotkey(v)
+    })
+  }, [])
+
+  const handleHotkeyChange = useCallback(async (newHotkey: string): Promise<boolean> => {
+    const ok = await window.electronAPI.settings.setHotkey(newHotkey)
+    if (ok) setHotkey(newHotkey)
+    return ok
+  }, [])
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -18,6 +32,8 @@ export function SettingsView(): ReactElement {
       </div>
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto">
+        <ShortcutSelector current={hotkey} onChange={handleHotkeyChange} />
+        <div className="border-t border-border" />
         <ThemeSelector theme={theme} onChange={setTheme} />
         <div className="border-t border-border" />
         <LanguageSelector />

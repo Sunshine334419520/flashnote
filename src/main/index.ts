@@ -187,14 +187,33 @@ function showMainWindow(): void {
   mainWindow!.focus()
 }
 
-function registerGlobalShortcut(hotkey: string): void {
+let currentHotkey = DEFAULT_HOTKEY
+
+function registerGlobalShortcut(hotkey: string): boolean {
   const registered = globalShortcut.register(hotkey, () => {
     showQuickCaptureWindow()
   })
 
   if (!registered) {
     console.warn(`Failed to register global shortcut: ${hotkey}`)
+    return false
   }
+  logger.info('main:hotkey', `Registered: ${hotkey}`)
+  return true
+}
+
+function updateGlobalShortcut(newHotkey: string): boolean {
+  if (newHotkey === currentHotkey) return true
+  globalShortcut.unregister(currentHotkey)
+  const ok = registerGlobalShortcut(newHotkey)
+  if (ok) {
+    currentHotkey = newHotkey
+  } else {
+    // Rollback: re-register the old one
+    registerGlobalShortcut(currentHotkey)
+    logger.warn('main:hotkey', `Failed to register ${newHotkey}, kept ${currentHotkey}`)
+  }
+  return ok
 }
 
 // ── Centralized icon assets ──────────────────────────────────────────────
@@ -307,6 +326,10 @@ function initServices(): { storagePath: string; aiService: AIService; aiCommandS
 app.whenReady().then(() => {
   const { storagePath, aiService, aiCommandService, taskManager } = initServices()
 
+  // Read hotkey from config (falls back to DEFAULT_HOTKEY on first run)
+  const { getConfig } = require('./services/config.service')
+  currentHotkey = getConfig('hotkey') ?? DEFAULT_HOTKEY
+
   registerAllIpcHandlers({
     storagePath,
     aiService,
@@ -315,7 +338,10 @@ app.whenReady().then(() => {
     showQuickCaptureWindow,
     hideQuickCaptureWindow,
     showSettingsWindow,
-    showMainWindow
+    showMainWindow,
+    settingsCallbacks: {
+      onHotkeyChange: updateGlobalShortcut
+    }
   })
 
   createMainWindow()
@@ -327,7 +353,7 @@ app.whenReady().then(() => {
   }
 
   createTray()
-  registerGlobalShortcut(DEFAULT_HOTKEY)
+  registerGlobalShortcut(currentHotkey)
 })
 
 app.on('window-all-closed', () => {

@@ -32,6 +32,7 @@ export const IPC_CHANNELS = {
   // Settings
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
+  SETTINGS_SET_HOTKEY: 'settings:set-hotkey',
   SETTINGS_GET_ALL: 'settings:getAll',
 
   // Window management

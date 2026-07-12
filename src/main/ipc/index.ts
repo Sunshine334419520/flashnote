@@ -3,6 +3,7 @@ import { registerAIIpc } from './ai.ipc'
 import { registerAICommandIpc } from './ai-command.ipc'
 import { registerSearchIpc } from './search.ipc'
 import { registerSettingsIpc } from './settings.ipc'
+import type { SettingsCallbacks } from './settings.ipc'
 import { registerWindowIpc } from './window.ipc'
 import { registerShellIpc } from './shell.ipc'
 import type { AIService } from '../services/ai'
@@ -18,6 +19,7 @@ export interface ServiceContext {
   hideQuickCaptureWindow: () => void
   showSettingsWindow: () => void
   showMainWindow: () => void
+  settingsCallbacks: SettingsCallbacks
 }
 
 export function registerAllIpcHandlers(ctx: ServiceContext): void {
@@ -25,7 +27,7 @@ export function registerAllIpcHandlers(ctx: ServiceContext): void {
   registerAIIpc(ctx.aiService)
   registerAICommandIpc(ctx.aiCommandService)
   registerSearchIpc()
-  registerSettingsIpc()
+  registerSettingsIpc(ctx.settingsCallbacks)
   registerShellIpc()
   registerWindowIpc({
     showQuickCaptureWindow: ctx.showQuickCaptureWindow,

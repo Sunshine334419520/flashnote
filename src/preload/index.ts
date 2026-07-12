@@ -99,6 +99,8 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET, key),
     set: (key: string, value: unknown): Promise<boolean> =>
       ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SET, { key, value }),
+    setHotkey: (hotkey: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SET_HOTKEY, hotkey),
     getAll: (): Promise<Record<string, unknown>> =>
       ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET_ALL)
   },

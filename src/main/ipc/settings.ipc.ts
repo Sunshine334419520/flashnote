@@ -8,7 +8,11 @@ function broadcast(channel: string, data: unknown): void {
   }
 }
 
-export function registerSettingsIpc(): void {
+export interface SettingsCallbacks {
+  onHotkeyChange: (hotkey: string) => boolean
+}
+
+export function registerSettingsIpc(callbacks: SettingsCallbacks): void {
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GET, async (_event, key: string) => {
     try {
       return (getAllConfig() as Record<string, unknown>)[key] ?? null
@@ -24,6 +28,19 @@ export function registerSettingsIpc(): void {
       return true
     } catch (err) {
       console.error('Failed to save setting:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SETTINGS_SET_HOTKEY, async (_event, hotkey: string) => {
+    try {
+      const ok = callbacks.onHotkeyChange(hotkey)
+      if (!ok) return false
+      setConfig('hotkey', hotkey)
+      broadcast(IPC_CHANNELS.EVENT_SETTINGS_CHANGED, { key: 'hotkey', value: hotkey })
+      return true
+    } catch (err) {
+      console.error('Failed to set hotkey:', err)
       return false
     }
   })

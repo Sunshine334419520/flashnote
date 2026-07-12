@@ -130,6 +130,15 @@ const en: Translations = {
   'quickcapture.hint.navigate': 'Enter ↵ select · ↑↓ navigate · Esc clear',
   'quickcapture.placeholder': 'Type and press Enter...',
   'quickcapture.created': 'Note created',
+
+  // Shortcut settings
+  'shortcut.title': 'Shortcut',
+  'shortcut.subtitle': 'Global shortcut for the Quick Capture window',
+  'shortcut.current': 'Current',
+  'shortcut.recommended': 'Recommended',
+  'shortcut.recording': 'Press keys...',
+  'shortcut.pressKeys': 'Press a new key combination, Esc to cancel',
+  'shortcut.conflict': 'Failed to register shortcut, may conflict with another app',
 }
 
 export default en
