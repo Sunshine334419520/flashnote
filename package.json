@@ -1,6 +1,6 @@
 {
   "name": "flashnote",
-  "version": "0.1.0",
+  "version": "0.1.0-beta",
   "description": "闪记 — AI-native smart note-taking app",
   "main": "./out/main/index.js",
   "packageManager": "pnpm@11.9.0",
