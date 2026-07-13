@@ -11,14 +11,6 @@ const messages: Record<string, Record<string, string>> = {
   'app.about':       { 'zh-CN': '关于闪记',       'en': 'About FlashNote' },
   'app.settings':    { 'zh-CN': '设置...',         'en': 'Settings...' },
   'app.quit':        { 'zh-CN': '退出闪记',        'en': 'Quit FlashNote' },
-  'edit.undo':       { 'zh-CN': '撤销',            'en': 'Undo' },
-  'edit.redo':       { 'zh-CN': '重做',            'en': 'Redo' },
-  'edit.cut':        { 'zh-CN': '剪切',            'en': 'Cut' },
-  'edit.copy':       { 'zh-CN': '复制',            'en': 'Copy' },
-  'edit.paste':      { 'zh-CN': '粘贴',            'en': 'Paste' },
-  'edit.selectAll':  { 'zh-CN': '全选',            'en': 'Select All' },
-  'window.minimize': { 'zh-CN': '最小化',          'en': 'Minimize' },
-  'window.close':    { 'zh-CN': '关闭窗口',        'en': 'Close Window' },
   'tray.capture':    { 'zh-CN': '快捷记录',        'en': 'Quick Capture' },
   'tray.open':       { 'zh-CN': '打开闪记',        'en': 'Open FlashNote' },
   'tray.settings':   { 'zh-CN': '设置...',         'en': 'Settings...' },
@@ -51,41 +43,33 @@ export function createAppMenu(settingsAction: () => void): void {
   lang = resolveLanguage()
   logger.info('main:menu', `Language resolved: ${lang}`)
 
+  // Set app name for the macOS menu bar (shows "Electron" otherwise in dev)
+  app.setName(lang === 'zh-CN' ? '闪记' : 'FlashNote')
+
   if (!IS_MAC) return // Windows/Linux: no native app menu
 
+  // Edit and Window menus use macOS system localization via `role`.
+  // No custom labels — system shows "编辑/Edit", "窗口/Window" automatically.
   const menu = Menu.buildFromTemplate([
     {
-      label: 'FlashNote',
+      label: app.name,
       submenu: [
         { label: t('app.about'), role: 'about' },
         { type: 'separator' },
         {
           label: t('app.settings'),
-          accelerator: 'CmdOrCtrl+,',
+          accelerator: 'Cmd+,',
           click: () => settingsAction()
         },
         { type: 'separator' },
-        { label: t('app.quit'), accelerator: 'CmdOrCtrl+Q', role: 'quit' }
+        { label: t('app.quit'), accelerator: 'Cmd+Q', role: 'quit' }
       ]
     },
     {
-      label: t('edit.title') || 'Edit',
-      submenu: [
-        { label: t('edit.undo'), accelerator: 'CmdOrCtrl+Z', role: 'undo' },
-        { label: t('edit.redo'), accelerator: 'Shift+CmdOrCtrl+Z', role: 'redo' },
-        { type: 'separator' },
-        { label: t('edit.cut'), accelerator: 'CmdOrCtrl+X', role: 'cut' },
-        { label: t('edit.copy'), accelerator: 'CmdOrCtrl+C', role: 'copy' },
-        { label: t('edit.paste'), accelerator: 'CmdOrCtrl+V', role: 'paste' },
-        { label: t('edit.selectAll'), accelerator: 'CmdOrCtrl+A', role: 'selectAll' }
-      ]
+      role: 'editMenu'
     },
     {
-      label: t('window.title') || 'Window',
-      submenu: [
-        { label: t('window.minimize'), accelerator: 'CmdOrCtrl+M', role: 'minimize' },
-        { label: t('window.close'), accelerator: 'CmdOrCtrl+W', role: 'close' }
-      ]
+      role: 'windowMenu'
     }
   ])
 
