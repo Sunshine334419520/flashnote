@@ -312,6 +312,9 @@ function initServices(): { storagePath: string; aiService: AIService; aiCommandS
   return { storagePath, aiService, aiCommandService, taskManager }
 }
 
+// Set app name BEFORE ready — affects Dock tooltip and menu bar name
+app.setName(app.getLocale().startsWith('zh') ? '闪记' : 'FlashNote')
+
 // ============================================================
 // App lifecycle
 // ============================================================
