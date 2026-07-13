@@ -1,8 +1,9 @@
 // Centralized icon asset imports — one place, all sizes.
-// Switch between v1/v2 by changing the version folder in the import paths.
-import icon16 from '../../../assets/icons/v2/icon_16x16.png'
-import icon32 from '../../../assets/icons/v2/icon_32x32.png'
-import icon64 from '../../../assets/icons/v2/icon_64x64.png'
+// Icons are kept within the renderer source tree so Vite resolves them reliably
+// on all platforms in both dev and production builds.
+import icon16 from './icons/icon_16x16.png'
+import icon32 from './icons/icon_32x32.png'
+import icon64 from './icons/icon_64x64.png'
 
 export const ICONS = {
   /** 16×16 tray / inline icon */

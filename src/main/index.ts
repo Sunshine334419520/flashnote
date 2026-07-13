@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, Tray, Menu, nativeImage, nativeTheme } from 'electron'
+import { app, BrowserWindow, globalShortcut, Tray, Menu, nativeImage, nativeTheme, screen } from 'electron'
 import { join } from 'path'
 import { readFileSync } from 'fs'
 import { homedir } from 'os'
@@ -60,8 +60,8 @@ function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 780,
     height: 690,
-    minWidth: 680,
-    minHeight: 420,
+    minWidth: 780,
+    minHeight: 690,
     backgroundColor: getThemeBackgroundColor(),
     icon: nativeImage.createFromPath(ICONS.dock),
     ...windowFrameOptions(),
@@ -124,7 +124,16 @@ function showQuickCaptureWindow(): void {
   }
 
   const win = quickCaptureWindow!
-  win.center()
+
+  // Position on the display where the cursor is, 30 % from the top
+  const cursorPoint = screen.getCursorScreenPoint()
+  const display = screen.getDisplayNearestPoint(cursorPoint)
+  const { x: dx, y: dy, width: dw, height: dh } = display.workArea
+  const [ww, wh] = win.getSize()
+  const x = Math.round(dx + (dw - ww) / 2)
+  const y = Math.round(dy + dh * 0.3 - wh / 2)
+  win.setPosition(x, y)
+
   win.show()
   win.focus()
 }
@@ -224,7 +233,7 @@ const ICON_BASE = isDev
   : join(process.resourcesPath, 'assets/icons', ICON_VERSION)
 
 const ICONS = {
-  tray:  join(ICON_BASE, 'icon_16x16.png'),
+  tray:  join(ICON_BASE, 'icon_32x32.png'),
   dock:  join(ICON_BASE, 'icon_dock_256x256.png'),
 }
 
@@ -330,6 +339,9 @@ app.whenReady().then(() => {
 
   // Read hotkey from config (falls back to DEFAULT_HOTKEY on first run)
   currentHotkey = getConfig('hotkey') ?? DEFAULT_HOTKEY
+
+  // Remove default application menu on Windows/Linux (keep title bar)
+  Menu.setApplicationMenu(null)
 
   registerAllIpcHandlers({
     storagePath,

@@ -77,7 +77,7 @@ const zhCN = {
 
   // Empty state
   'empty.title': '没有笔记',
-  'empty.hint': '使用 ⌥Space 快速记录，或在顶部搜索框输入内容',
+  'empty.hint': '使用 Alt+Space 快速记录，或在顶部搜索框输入内容',
 
   // Task bar
   'task.ready': '就绪',

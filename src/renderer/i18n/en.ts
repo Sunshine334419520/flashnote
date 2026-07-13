@@ -71,7 +71,7 @@ const en: Translations = {
   'confirm.ok': 'Delete',
 
   'empty.title': 'No notes',
-  'empty.hint': 'Press ⌥Space to capture your first note',
+  'empty.hint': 'Press Alt+Space to capture your first note',
 
   'task.ready': 'Ready',
   'task.processing': '{n} processing...',
