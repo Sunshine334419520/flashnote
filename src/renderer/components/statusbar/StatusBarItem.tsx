@@ -9,10 +9,12 @@ interface Props {
   text?: string
   badge?: number
   badgeColor?: string
+  /** Show a simple colored dot instead of a numbered badge. */
+  dot?: boolean
   children: ReactNode
 }
 
-export function StatusBarItem({ id, icon, label, text, badge, badgeColor = 'bg-type-credential', children }: Props): ReactElement {
+export function StatusBarItem({ id, icon, label, text, badge, badgeColor = 'bg-type-credential', dot = false, children }: Props): ReactElement {
   const activePanel = useStatusBarStore((s) => s.activePanel)
   const togglePanel = useStatusBarStore((s) => s.togglePanel)
   const closePanel = useStatusBarStore((s) => s.closePanel)
@@ -43,17 +45,31 @@ export function StatusBarItem({ id, icon, label, text, badge, badgeColor = 'bg-t
             : 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30'
         )}
       >
-        {icon}
+        {dot ? (
+          <span className="relative inline-flex">
+            {icon}
+            {badge != null && badge > 0 && (
+              <span className={cn(
+                'absolute -top-0.5 -right-0.5 w-[6px] h-[6px] rounded-full',
+                badgeColor
+              )} />
+            )}
+          </span>
+        ) : (
+          <>
+            {icon}
+            {badge != null && badge > 0 && (
+              <span className={cn(
+                'absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full text-[8px] font-bold text-white',
+                badgeColor
+              )}>
+                {badge > 99 ? '99+' : badge}
+              </span>
+            )}
+          </>
+        )}
         {text && (
           <span className="truncate max-w-[80px]">{text}</span>
-        )}
-        {badge != null && badge > 0 && (
-          <span className={cn(
-            'absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full text-[8px] font-bold text-white',
-            badgeColor
-          )}>
-            {badge > 99 ? '99+' : badge}
-          </span>
         )}
       </button>
 

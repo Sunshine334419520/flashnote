@@ -266,8 +266,9 @@ export function MainView(): ReactElement {
           id="ai"
           icon={<Sparkles size={14} />}
           label={t('statusbar.aiRecords')}
-          text={failedCount > 0 ? t('statusbar.failed', { n: failedCount }) : t('statusbar.ai')}
+          text={t('statusbar.ai')}
           badge={failedCount}
+          dot
         >
           <StatusBarPanel title={t('statusbar.aiRecords')}>
             <AIOperationPanel />
