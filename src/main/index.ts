@@ -233,12 +233,17 @@ const ICON_BASE = isDev
   : join(process.resourcesPath, 'assets/icons', ICON_VERSION)
 
 const ICONS = {
-  tray:  join(ICON_BASE, 'icon_32x32.png'),
+  tray:  join(ICON_BASE, 'icon_16x16.png'),
   dock:  join(ICON_BASE, 'icon_dock_256x256.png'),
 }
 
 function createTrayIcon(): Electron.NativeImage {
-  return nativeImage.createFromPath(ICONS.tray)
+  const img = nativeImage.createFromPath(ICONS.tray)
+  // macOS: template image auto-adapts to dark/light menu bar
+  if (process.platform === 'darwin') {
+    img.setTemplateImage(true)
+  }
+  return img
 }
 
 function createTray(): void {
