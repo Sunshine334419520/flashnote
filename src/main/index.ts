@@ -233,7 +233,7 @@ const ICON_BASE = isDev
   : join(process.resourcesPath, 'assets/icons', ICON_VERSION)
 
 const ICONS = {
-  tray:  join(ICON_BASE, process.platform === 'darwin' ? 'icon_16x16.png' : 'icon_32x32.png'),
+  tray:  join(ICON_BASE, process.platform === 'darwin' ? 'tray_16x16.png' : 'icon_32x32.png'),
   dock:  join(ICON_BASE, 'icon_dock_256x256.png'),
 }
 
