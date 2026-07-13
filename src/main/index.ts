@@ -11,6 +11,7 @@ import { AICommandService } from './services/ai/command.service'
 import { TaskManager } from './services/task-manager'
 import { initLogger, logger } from './utils/logger'
 import { closeDatabase } from './database/connection'
+import { createAppMenu, createTrayMenu } from './menu'
 import { DEFAULT_HOTKEY } from '../shared/constants'
 
 let mainWindow: BrowserWindow | null = null
@@ -250,37 +251,24 @@ function createTray(): void {
   const icon = createTrayIcon()
   tray = new Tray(icon)
 
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Quick Capture',
-      click: () => showQuickCaptureWindow()
-    },
-    {
-      label: 'Open FlashNote',
-      click: () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show()
-          mainWindow.focus()
-        } else {
-          createMainWindow()
-          mainWindow!.show()
-        }
+  const trayMenu = createTrayMenu({
+    showQuickCapture: () => showQuickCaptureWindow(),
+    showMain: () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show()
+        mainWindow.focus()
+      } else {
+        createMainWindow()
+        mainWindow!.show()
       }
     },
-    { type: 'separator' },
-    {
-      label: 'Settings',
-      click: () => showSettingsWindow()
-    },
-    { type: 'separator' },
-    {
-      label: 'Quit',
-      click: () => app.quit()
-    }
-  ])
+    showSettings: () => showSettingsWindow(),
+    quit: () => app.quit(),
+    getHotkeyLabel: () => currentHotkey.replace(/\+/g, ' ')
+  })
 
   tray.setToolTip('FlashNote')
-  tray.setContextMenu(contextMenu)
+  tray.setContextMenu(trayMenu)
 
   tray.on('click', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -364,6 +352,7 @@ app.whenReady().then(() => {
 
   createMainWindow()
   createQuickCaptureWindow()
+  createAppMenu(() => showSettingsWindow())
 
   // Dock icon (macOS)
   if (process.platform === 'darwin' && app.dock) {
