@@ -269,16 +269,6 @@ function createTray(): void {
 
   tray.setToolTip('FlashNote')
   tray.setContextMenu(trayMenu)
-
-  tray.on('click', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show()
-      mainWindow.focus()
-    } else {
-      createMainWindow()
-      mainWindow!.show()
-    }
-  })
 }
 
 // ============================================================
