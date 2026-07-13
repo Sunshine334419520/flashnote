@@ -1,6 +1,7 @@
-import { Menu, app, BrowserWindow } from 'electron'
+import { Menu, app } from 'electron'
 import { loadConfig } from './services/config.service'
 import { logger } from './utils/logger'
+import { IS_MAC } from '../shared/constants'
 
 // ── i18n for main process ────────────────────────────────────────────────
 
@@ -50,10 +51,7 @@ export function createAppMenu(settingsAction: () => void): void {
   lang = resolveLanguage()
   logger.info('main:menu', `Language resolved: ${lang}`)
 
-  if (process.platform !== 'darwin') {
-    // Windows/Linux: no native app menu, just tray
-    return
-  }
+  if (!IS_MAC) return // Windows/Linux: no native app menu
 
   const menu = Menu.buildFromTemplate([
     {

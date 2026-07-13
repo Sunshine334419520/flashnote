@@ -12,7 +12,7 @@ import { TaskManager } from './services/task-manager'
 import { initLogger, logger } from './utils/logger'
 import { closeDatabase } from './database/connection'
 import { createAppMenu, createTrayMenu } from './menu'
-import { DEFAULT_HOTKEY } from '../shared/constants'
+import { IS_MAC, DEFAULT_HOTKEY } from '../shared/constants'
 
 let mainWindow: BrowserWindow | null = null
 let quickCaptureWindow: BrowserWindow | null = null
@@ -51,7 +51,7 @@ function getThemeBackgroundColor(): string {
  * QuickCapture is intentionally frameless regardless of platform.
  */
 function windowFrameOptions(): { frame?: boolean; titleBarStyle?: 'hiddenInset' } {
-  if (process.platform === 'darwin') {
+  if (IS_MAC) {
     return { titleBarStyle: 'hiddenInset' }
   }
   return { frame: true }
@@ -234,14 +234,14 @@ const ICON_BASE = isDev
   : join(process.resourcesPath, 'assets/icons', ICON_VERSION)
 
 const ICONS = {
-  tray:  join(ICON_BASE, process.platform === 'darwin' ? 'tray_16x16.png' : 'icon_32x32.png'),
+  tray:  join(ICON_BASE, IS_MAC ? 'tray_16x16.png' : 'icon_32x32.png'),
   dock:  join(ICON_BASE, 'icon_dock_256x256.png'),
 }
 
 function createTrayIcon(): Electron.NativeImage {
   const img = nativeImage.createFromPath(ICONS.tray)
   // macOS: template image auto-adapts to dark/light menu bar
-  if (process.platform === 'darwin') {
+  if (IS_MAC) {
     img.setTemplateImage(true)
   }
   return img
@@ -355,7 +355,7 @@ app.whenReady().then(() => {
   createAppMenu(() => showSettingsWindow())
 
   // Dock icon (macOS)
-  if (process.platform === 'darwin' && app.dock) {
+  if (IS_MAC && app.dock) {
     app.dock.setIcon(nativeImage.createFromPath(ICONS.dock))
   }
 
@@ -367,7 +367,7 @@ app.whenReady().then(() => {
 let _aiService: AIService | null = null
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (!IS_MAC) {
     app.quit()
   }
 })

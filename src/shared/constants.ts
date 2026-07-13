@@ -2,6 +2,10 @@ import type { AppConfig, AIProviderConfig } from './types'
 
 export const APP_NAME = 'FlashNote'
 
+export const IS_MAC = process.platform === 'darwin'
+export const IS_WIN = process.platform === 'win32'
+export const IS_LINUX = process.platform === 'linux'
+
 export const DEFAULT_CATEGORIES = [
   'API Keys & Credentials',
   'Meeting Notes',
