@@ -231,7 +231,7 @@ export function CommandInput({ mode, value, onChange, notes: externalNotes, onCo
   return (
     <div className="relative w-full max-w-2xl mx-auto">
       <div className="relative rounded-xl border border-border bg-card glow-amber">
-        <img src={ICONS.icon64} className="absolute left-4 top-1/2 -translate-y-1/2 w-[15px] h-[15px] opacity-40 pointer-events-none" alt="" />
+        <img src={ICONS.icon64} className="absolute left-4 top-1/2 -translate-y-1/2 w-[15px] h-[15px] opacity-40 dark:opacity-60 dark:invert pointer-events-none" alt="" />
         <input
           ref={inputRef}
           type="text"

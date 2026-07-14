@@ -280,7 +280,7 @@ export function QuickCapture(): ReactElement {
       <div className="flex items-center gap-3 px-4" style={{ height: INPUT_HEIGHT }}>
         <img
           src={ICONS.icon64}
-          className="w-[18px] h-[18px] opacity-40 shrink-0"
+          className="w-[18px] h-[18px] opacity-40 dark:opacity-60 dark:invert shrink-0"
           alt=""
         />
         <input
