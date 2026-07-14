@@ -75,21 +75,10 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Minimal scrollbar */
-  ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 2px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-muted-foreground);
-    opacity: 0.5;
+  /* Scrollbar: let macOS use native overlay (auto-hide), thin on Windows */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
   }
 }
 
