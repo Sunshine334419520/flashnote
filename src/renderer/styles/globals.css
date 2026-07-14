@@ -75,7 +75,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Minimal overlay scrollbar — only visible on hover/scroll */
+  /* Minimal scrollbar */
   ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -84,17 +84,12 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: transparent;
+    background: var(--color-border);
     border-radius: 2px;
-    transition: background 0.2s;
-  }
-  /* Show thumb on hover */
-  *:hover::-webkit-scrollbar-thumb {
-    background: hsl(var(--border) / 0.6);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
-  }
+    background: var(--color-muted-foreground);
+    opacity: 0.5;
   }
 }
 
