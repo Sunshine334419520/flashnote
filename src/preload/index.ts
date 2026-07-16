@@ -23,7 +23,7 @@ import type {
 
 // Apply theme BEFORE page renders — reads config.json synchronously (no flash)
 try {
-  const configPath = join(homedir(), 'FlashNote', 'config.json')
+  const configPath = join(homedir(), '.flashnote', 'config.json')
   const raw = readFileSync(configPath, 'utf-8')
   const config = JSON.parse(raw) as { theme?: string }
   const t = config.theme ?? 'system'

@@ -28,7 +28,7 @@ const LIGHT_BG = '#fafaf9'
 /** Read saved theme and return matching window background color. */
 function getThemeBackgroundColor(): string {
   try {
-    const configPath = join(homedir(), 'FlashNote', 'config.json')
+    const configPath = join(homedir(), '.flashnote', 'config.json')
     const raw = readFileSync(configPath, 'utf-8')
     const config = JSON.parse(raw) as { theme?: string }
     const t = config.theme ?? 'system'
