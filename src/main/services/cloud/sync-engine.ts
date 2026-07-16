@@ -9,19 +9,20 @@ export interface ConnectionConfig {
 }
 
 /**
- * Core sync engine: compares local notes against remote by version number (rev),
- * pushes local changes, pulls remote updates.
+ * Core sync engine: compares local notes against remote using a two-rev model.
  *
- * syncRev semantics (git-like):
- *   0          — never synced
- *   N          — last version that was pushed/pulled
- *   edit       — syncRev++ (local version bumps)
+ * syncRev — local version (incremented on each local edit).
+ * baseRev — the remote version this note was last synced to (0 = never synced).
  *
- * Comparison:
- *   syncRev == 0            → push (new note)
- *   remote.rev > local.rev  → pull (remote is newer)
- *   local.rev  > remote.rev → push (local is newer)
- *   equal                   → skip
+ * After sync, baseRev == remoteRev (we're caught up). Edits bump syncRev only.
+ *
+ * Pull phase:  remoteRev > baseRev              → pull update
+ *              syncRev > baseRev && pull needed  → conflict (both edited)
+ *              local has baseRev>0, not in remote→ remote deleted
+ *
+ * Push phase:  baseRev == 0, not in remote      → create (new note)
+ *              syncRev > baseRev                 → push update (safe after pull)
+ *              else                              → skip (in sync)
  */
 export class SyncEngine {
   constructor(private adapter: CloudSyncAdapter) {}
@@ -33,6 +34,7 @@ export class SyncEngine {
       id: note.id,
       rev: note.syncRev,
       ca: note.createdAt,
+      ua: note.updatedAt,
       ic: note.isClassified,
       me: note.isManuallyEdited,
       sh: note.sourceHint ?? '',
@@ -66,13 +68,14 @@ export class SyncEngine {
       sensitive: remote.sensitive,
       typedData: remote.meta.td,
       createdAt: remote.meta.ca,
-      updatedAt: remote.lastEditedAt,
+      updatedAt: remote.meta.ua || remote.lastEditedAt,
       isClassified: remote.meta.ic,
       isManuallyEdited: remote.meta.me,
       status: remote.status as Note['status'],
       sourceHint: remote.meta.sh || undefined,
       metadata: {},
-      syncRev: remote.meta.rev
+      syncRev: remote.meta.rev,
+      baseRev: remote.meta.rev
     }
   }
 
@@ -100,14 +103,17 @@ export class SyncEngine {
       return result
     }
 
-    // 3. Index by flashnoteId
+    // 3. Index
     const localMap = new Map<string, Note>()
     for (const n of localNotes) localMap.set(n.id, n)
 
     const remoteMap = new Map<string, RemoteNote>()
     for (const r of remoteNotes) remoteMap.set(r.flashnoteId, r)
 
-    // 4. Pull remote updates first (get latest state)
+    const deletedLocally = new Set<string>()  // track notes deleted during pull phase
+
+    // ═══ 4. Pull phase: remote → local ════════════════════════════
+
     for (const remote of remoteNotes) {
       const local = localMap.get(remote.flashnoteId)
 
@@ -119,37 +125,81 @@ export class SyncEngine {
         } catch (err) {
           result.errors.push(`pull ${remote.flashnoteId}: ${String(err)}`)
         }
-      } else if (remote.meta.rev > local.syncRev) {
-        // Remote has newer version → update local
-        try {
-          this.upsertLocalNote(SyncEngine.remoteToLocalNote(remote))
-          result.pulled++
-        } catch (err) {
-          result.errors.push(`pull ${remote.flashnoteId}: ${String(err)}`)
+      } else if (remote.meta.rev > local.baseRev) {
+        // Remote has changes since our last sync
+        if (local.syncRev > local.baseRev) {
+          if (local.syncRev === remote.meta.rev) {
+            // Both sides agree on version — baseRev was just not tracked
+            // (e.g., migration 008 initialized it to 0). Catch up silently.
+            this.updateBaseRev(local.id, remote.meta.rev)
+          } else {
+            // Real conflict: both local and remote have diverged
+            const msg = `conflict: "${local.title}" edited on both sides`
+            logger.warn('cloud:sync', msg, { noteId: local.id, localRev: local.syncRev, remoteRev: remote.meta.rev, baseRev: local.baseRev })
+            result.errors.push(msg)
+          }
+        } else {
+          // Safe pull: local hasn't changed, just outdated
+          try {
+            this.upsertLocalNote(SyncEngine.remoteToLocalNote(remote))
+            result.pulled++
+          } catch (err) {
+            result.errors.push(`pull ${remote.flashnoteId}: ${String(err)}`)
+          }
         }
       }
-      // else: local.syncRev >= remote.rev → local is same or ahead, skip
+      // else: remoteRev <= baseRev → remote hasn't changed since our last sync
     }
 
-    // 5. Push local changes
+    // ── Detect remote deletes: local notes not in remoteMap with baseRev > 0
     for (const local of localNotes) {
+      if (!remoteMap.has(local.id) && local.baseRev > 0) {
+        try {
+          removeNote(local.id)
+          deletedLocally.add(local.id)
+          logger.info('cloud:sync', `Remote delete: "${local.title}"`, { noteId: local.id })
+        } catch (err) {
+          result.errors.push(`delete ${local.id}: ${String(err)}`)
+        }
+      }
+    }
+
+    // ═══ 5. Push phase: local → remote ═══════════════════════════
+
+    for (const local of localNotes) {
+      // Skip notes that were deleted during the pull phase (remote delete)
+      if (deletedLocally.has(local.id)) continue
+
       const remote = remoteMap.get(local.id)
 
       if (!remote) {
-        // Local note doesn't exist remotely → create
-        try {
-          await this.adapter.createNote(conn.accessToken, conn.databaseId, SyncEngine.toSyncPayload(local))
-          result.pushed++
-        } catch (err) {
-          result.errors.push(`push ${local.id}: ${String(err)}`)
+        // Not on remote. baseRev > 0 means it WAS there → deleted remotely (already handled above).
+        // baseRev == 0 means never synced → create.
+        if (local.baseRev === 0) {
+          try {
+            await this.adapter.createNote(conn.accessToken, conn.databaseId, SyncEngine.toSyncPayload(local))
+            this.updateBaseRev(local.id, local.syncRev)
+            result.pushed++
+          } catch (err) {
+            result.errors.push(`push ${local.id}: ${String(err)}`)
+          }
         }
-      } else if (local.syncRev > remote.meta.rev) {
-        // Local has been edited since last sync → update remote
-        try {
-          await this.adapter.updateNote(conn.accessToken, remote.pageId, SyncEngine.toSyncPayload(local))
-          result.pushed++
-        } catch (err) {
-          result.errors.push(`push ${local.id}: ${String(err)}`)
+        // else: baseRev > 0 and !remote → was deleted remotely → already handled
+      } else if (local.syncRev > local.baseRev) {
+        // Local has changes since last sync
+        if (local.baseRev < remote.meta.rev) {
+          // Conflict: remote also changed since our last sync (pull phase already detected this)
+          // Skip here — already reported in pull phase
+          result.skipped++
+        } else {
+          // Safe push
+          try {
+            await this.adapter.updateNote(conn.accessToken, remote.pageId, SyncEngine.toSyncPayload(local))
+            this.updateBaseRev(local.id, local.syncRev)
+            result.pushed++
+          } catch (err) {
+            result.errors.push(`push ${local.id}: ${String(err)}`)
+          }
         }
       } else {
         result.skipped++
@@ -224,6 +274,26 @@ export class SyncEngine {
 
   // ── Helpers ───────────────────────────────────────────────
 
+  /**
+   * After a successful push, update baseRev to match the synced version.
+   * Must NOT increment syncRev — this is a metadata update, not a user edit.
+   */
+  private updateBaseRev(noteId: string, newBaseRev: number): void {
+    try {
+      const existing = readNote(noteId)
+      if (existing) {
+        modifyNote({
+          id: noteId,
+          baseRev: newBaseRev,
+          syncRev: existing.syncRev,
+          isManuallyEdited: existing.isManuallyEdited
+        })
+      }
+    } catch (err) {
+      logger.error('cloud:sync', `updateBaseRev failed for ${noteId}`, { error: String(err) })
+    }
+  }
+
   private upsertLocalNote(note: Note): void {
     const existing = readNote(note.id)
     if (existing) {
@@ -233,19 +303,24 @@ export class SyncEngine {
         content: note.content,
         category: note.category,
         tags: note.tags,
-        status: note.status
+        status: note.status,
+        syncRev: note.syncRev,
+        baseRev: note.baseRev
       })
     } else {
       createNote(
         { content: note.content },
         {
+          id: note.id,
           type: note.type,
           category: note.category,
           tags: note.tags,
           title: note.title,
           sensitive: note.sensitive,
           typedData: note.typedData,
-          status: note.status
+          status: note.status,
+          syncRev: note.syncRev,
+          baseRev: note.baseRev
         }
       )
     }

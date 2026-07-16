@@ -82,6 +82,16 @@ function createMainWindow(): void {
 
   if (isDev) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL!)
+    // DevTools shortcuts are bound to the application menu, which we
+    // remove on Windows/Linux. Handle them manually in dev mode.
+    mainWindow.webContents.on('before-input-event', (_event, input) => {
+      if (
+        (input.key === 'F12' && !input.control && !input.shift && !input.alt && !input.meta) ||
+        (input.key === 'I' && input.control && input.shift && !input.alt && !input.meta)
+      ) {
+        mainWindow?.webContents.toggleDevTools()
+      }
+    })
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -348,11 +358,12 @@ app.whenReady().then(() => {
     }
   })
 
-  // Start cloud sync polling if a connection exists
-  cloudSyncService.startPolling()
-
   createMainWindow()
   createQuickCaptureWindow()
+
+  // Start cloud sync polling if a connection exists (after window creation
+  // so the renderer can receive progress events during the initial sync).
+  cloudSyncService.startPolling()
   createAppMenu(() => showSettingsWindow())
 
   // Dock icon (macOS)

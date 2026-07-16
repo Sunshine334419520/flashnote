@@ -181,6 +181,9 @@ const zhCN = {
   'cloud.feishuComingSoon': '飞书多维表格支持即将上线',
   'cloud.recentSync': '同步完成',
   'cloud.syncFailed': '同步失败',
+  'cloud.phase.comparing': '正在比较...',
+  'cloud.phase.pushing': '正在推送...',
+  'cloud.phase.pulling': '正在拉取...',
 }
 
 export default zhCN

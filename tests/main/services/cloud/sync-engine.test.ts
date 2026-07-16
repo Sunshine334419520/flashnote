@@ -30,6 +30,7 @@ function makeNote(overrides: Partial<Note> & { id: string }): Note {
     metadata: {}, typedData: undefined, isClassified: false, isManuallyEdited: false,
     createdAt: '2025-07-01T00:00:00.000Z', updatedAt: '2025-07-01T00:00:00.000Z',
     syncRev: 0,
+    baseRev: 0,
     ...overrides
   }
 }
@@ -38,7 +39,7 @@ function makeRemoteNote(overrides: Partial<RemoteNote>): RemoteNote {
   return {
     pageId: 'page-1', flashnoteId: 'note-1', title: 'Test Note', content: 'test content',
     type: 'text', category: 'Other', tags: [], sensitive: false, status: 'published',
-    meta: { v: 1, id: 'note-1', rev: 1, ca: '2025-07-01T00:00:00.000Z', ic: false, me: false, sh: '', td: {} },
+    meta: { v: 1, id: 'note-1', rev: 1, ca: '2025-07-01T00:00:00.000Z', ua: '2025-07-01T00:00:00.000Z', ic: false, me: false, sh: '', td: {} },
     lastEditedAt: '2025-07-01T00:00:00.000Z',
     ...overrides
   }
@@ -78,6 +79,7 @@ describe('SyncEngine.buildMeta', () => {
     expect(meta).toEqual({
       v: 1, id: 'abc-123', rev: 5,
       ca: '2025-07-01T00:00:00.000Z',
+      ua: '2025-07-01T00:00:00.000Z',
       ic: true, me: false, sh: 'web', td: { url: 'https://example.com' }
     })
   })
@@ -104,7 +106,7 @@ describe('SyncEngine.remoteToLocalNote', () => {
   it('converts RemoteNote to local Note with syncRev', () => {
     const remote = makeRemoteNote({
       flashnoteId: 'note-42', title: 'Remote Note', type: 'command',
-      meta: { v: 1, id: 'note-42', rev: 7, ca: '2025-06-01T00:00:00.000Z', ic: true, me: false, sh: 'cli', td: { shell: 'bash' } }
+      meta: { v: 1, id: 'note-42', rev: 7, ca: '2025-06-01T00:00:00.000Z', ua: '2025-06-01T00:00:00.000Z', ic: true, me: false, sh: 'cli', td: { shell: 'bash' } }
     })
     const note = SyncEngine.remoteToLocalNote(remote)
     expect(note.id).toBe('note-42')
@@ -129,11 +131,12 @@ describe('SyncEngine.syncAll', () => {
     expect(adapter.createNote).toHaveBeenCalledTimes(1)
   })
 
-  it('pushes local notes with syncRev > remote.rev', async () => {
+  it('pushes local notes with syncRev > baseRev (edited since last sync)', async () => {
     const adapter = makeMockAdapter()
     const engine = new SyncEngine(adapter)
-    const localNote = makeNote({ id: 'note-1', syncRev: 5 })
-    const remoteNote = makeRemoteNote({ flashnoteId: 'note-1', pageId: 'page-1', meta: { v: 1, id: 'note-1', rev: 3, ca: '', ic: false, me: false, sh: '', td: {} } })
+    // baseRev=3 means last synced at remote rev 3; syncRev=5 means edited twice since
+    const localNote = makeNote({ id: 'note-1', syncRev: 5, baseRev: 3 })
+    const remoteNote = makeRemoteNote({ flashnoteId: 'note-1', pageId: 'page-1', meta: { v: 1, id: 'note-1', rev: 3, ca: '', ua: '', ic: false, me: false, sh: '', td: {} } })
 
     mockStorage.getNotes.mockReturnValue({ notes: [localNote], total: 1, hasMore: false })
     adapter.listNotes = vi.fn().mockResolvedValue([remoteNote])
@@ -155,22 +158,23 @@ describe('SyncEngine.syncAll', () => {
     expect(mockStorage.createNote).toHaveBeenCalled()
   })
 
-  it('pulls when remote.rev > local.syncRev', async () => {
+  it('pulls when remote.rev > local.baseRev (remote updated since last sync)', async () => {
     const adapter = makeMockAdapter()
     const engine = new SyncEngine(adapter)
-    mockStorage.getNotes.mockReturnValue({ notes: [makeNote({ id: 'note-1', syncRev: 1 })], total: 1, hasMore: false })
-    adapter.listNotes = vi.fn().mockResolvedValue([makeRemoteNote({ flashnoteId: 'note-1', pageId: 'page-1', meta: { v: 1, id: 'note-1', rev: 5, ca: '', ic: false, me: false, sh: '', td: {} } })])
-    mockStorage.readNote.mockReturnValue(makeNote({ id: 'note-1', syncRev: 1 }))
+    // Local was synced at rev 1 (baseRev=1, syncRev=1). Remote is now at rev 5.
+    mockStorage.getNotes.mockReturnValue({ notes: [makeNote({ id: 'note-1', syncRev: 1, baseRev: 1 })], total: 1, hasMore: false })
+    adapter.listNotes = vi.fn().mockResolvedValue([makeRemoteNote({ flashnoteId: 'note-1', pageId: 'page-1', meta: { v: 1, id: 'note-1', rev: 5, ca: '', ua: '', ic: false, me: false, sh: '', td: {} } })])
+    mockStorage.readNote.mockReturnValue(makeNote({ id: 'note-1', syncRev: 1, baseRev: 1 }))
 
     const result = await engine.syncAll(conn)
     expect(result.pulled).toBe(1)
   })
 
-  it('skips when local.syncRev equals remote.rev', async () => {
+  it('skips when local.syncRev equals baseRev (in sync)', async () => {
     const adapter = makeMockAdapter()
     const engine = new SyncEngine(adapter)
-    mockStorage.getNotes.mockReturnValue({ notes: [makeNote({ id: 'note-1', syncRev: 3 })], total: 1, hasMore: false })
-    adapter.listNotes = vi.fn().mockResolvedValue([makeRemoteNote({ flashnoteId: 'note-1', pageId: 'page-1', meta: { v: 1, id: 'note-1', rev: 3, ca: '', ic: false, me: false, sh: '', td: {} } })])
+    mockStorage.getNotes.mockReturnValue({ notes: [makeNote({ id: 'note-1', syncRev: 3, baseRev: 3 })], total: 1, hasMore: false })
+    adapter.listNotes = vi.fn().mockResolvedValue([makeRemoteNote({ flashnoteId: 'note-1', pageId: 'page-1', meta: { v: 1, id: 'note-1', rev: 3, ca: '', ua: '', ic: false, me: false, sh: '', td: {} } })])
 
     const result = await engine.syncAll(conn)
     expect(result.pushed).toBe(0)
@@ -244,7 +248,7 @@ describe('SyncEngine.pullAll', () => {
 
   it('updates when remote.rev > local.syncRev', async () => {
     const adapter = makeMockAdapter({
-      listNotes: vi.fn().mockResolvedValue([makeRemoteNote({ flashnoteId: 'r1', meta: { v: 1, id: 'r1', rev: 5, ca: '', ic: false, me: false, sh: '', td: {} } })])
+      listNotes: vi.fn().mockResolvedValue([makeRemoteNote({ flashnoteId: 'r1', meta: { v: 1, id: 'r1', rev: 5, ca: '', ua: '', ic: false, me: false, sh: '', td: {} } })])
     })
     const engine = new SyncEngine(adapter)
     mockStorage.readNote.mockReturnValue(makeNote({ id: 'r1', syncRev: 1 }))
@@ -254,7 +258,7 @@ describe('SyncEngine.pullAll', () => {
 
   it('skips when local is already up to date', async () => {
     const adapter = makeMockAdapter({
-      listNotes: vi.fn().mockResolvedValue([makeRemoteNote({ flashnoteId: 'r1', meta: { v: 1, id: 'r1', rev: 3, ca: '', ic: false, me: false, sh: '', td: {} } })])
+      listNotes: vi.fn().mockResolvedValue([makeRemoteNote({ flashnoteId: 'r1', meta: { v: 1, id: 'r1', rev: 3, ca: '', ua: '', ic: false, me: false, sh: '', td: {} } })])
     })
     const engine = new SyncEngine(adapter)
     mockStorage.readNote.mockReturnValue(makeNote({ id: 'r1', syncRev: 5 })) // local is ahead

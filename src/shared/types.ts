@@ -22,6 +22,8 @@ export interface Note {
   isManuallyEdited: boolean
   status: 'draft' | 'published'
   syncRev: number
+  /** The remote version this note was last synced to. 0 = never synced. */
+  baseRev: number
 }
 
 // ============================================================
@@ -60,6 +62,9 @@ export interface NoteUpdateRequest {
   category?: string
   tags?: string[]
   status?: 'draft' | 'published'
+  syncRev?: number
+  baseRev?: number
+  isManuallyEdited?: boolean
 }
 
 // ============================================================

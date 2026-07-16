@@ -243,6 +243,7 @@ export class CloudSyncService {
     }
 
     this.broadcastProgress('comparing', 0, 0)
+    const startedAt = Date.now()
 
     const result = await this.syncEngine.syncAll({
       accessToken: conn.access_token,
@@ -250,10 +251,9 @@ export class CloudSyncService {
     })
 
     this.updateLastSync(conn.id)
-
-    this.broadcastProgress('idle', 0, 0)
-
-    broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
+    this.finishPollSync(startedAt, () => {
+      broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
+    })
 
     return result
   }
@@ -350,21 +350,52 @@ export class CloudSyncService {
   startPolling(): void {
     if (this.pollTimer) return
     this.pollTimer = setInterval(() => {
-      const conn = this.getActiveConnection()
-      if (!conn || conn.status !== 'connected') return
+      this.pollSyncOnce()
+    }, 60 * 60 * 1000) // 1 hour
 
-      this.syncEngine.syncAll({
-        accessToken: conn.access_token,
-        databaseId: conn.database_id!
-      }).then((result) => {
-        this.updateLastSync(conn.id)
-        if (result.pulled > 0 || result.pushed > 0) {
-          broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
-        }
-      }).catch((err) => {
-        logger.error('cloud:service', 'Poll sync failed', { error: String(err) })
+    // Run an immediate sync on startup if already connected
+    this.pollSyncOnce()
+  }
+
+  private pollSyncOnce(): void {
+    const conn = this.getActiveConnection()
+    if (!conn || conn.status !== 'connected') {
+      logger.info('cloud:service', 'Poll skipped: not connected')
+      return
+    }
+
+    logger.info('cloud:service', 'Poll sync started')
+    this.broadcastProgress('comparing', 0, 0)
+    const startedAt = Date.now()
+
+    this.syncEngine.syncAll({
+      accessToken: conn.access_token,
+      databaseId: conn.database_id!
+    }).then((result) => {
+      this.updateLastSync(conn.id)
+      this.finishPollSync(startedAt, () => {
+        broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
       })
-    }, 5 * 60 * 1000) // 5 minutes
+      logger.info('cloud:service', `Poll sync done: +${result.pushed} -${result.pulled} =${result.skipped}`)
+    }).catch((err) => {
+      logger.error('cloud:service', 'Poll sync failed', { error: String(err) })
+      this.finishPollSync(startedAt)
+    })
+  }
+
+  /** Broadcast 'idle' after a minimum of 1s so the user sees the spinner. */
+  private finishPollSync(startedAt: number, after?: () => void): void {
+    const elapsed = Date.now() - startedAt
+    const delay = Math.max(0, 1000 - elapsed)
+    const finish = () => {
+      this.broadcastProgress('idle', 0, 0)
+      after?.()
+    }
+    if (delay > 0) {
+      setTimeout(finish, delay)
+    } else {
+      finish()
+    }
   }
 
   stopPolling(): void {
@@ -452,7 +483,7 @@ export class CloudSyncService {
   private updateLastSync(id: string): void {
     const db = getDatabase()
     db.prepare(
-      "UPDATE cloud_connections SET last_sync_at = datetime('now') WHERE id = ?"
+      "UPDATE cloud_connections SET last_sync_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?"
     ).run(id)
   }
 

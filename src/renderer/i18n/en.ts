@@ -173,6 +173,9 @@ const en: Translations = {
   'cloud.feishuComingSoon': 'Feishu Bitable support coming soon',
   'cloud.recentSync': 'Sync completed',
   'cloud.syncFailed': 'Sync failed',
+  'cloud.phase.comparing': 'Comparing...',
+  'cloud.phase.pushing': 'Pushing...',
+  'cloud.phase.pulling': 'Pulling...',
 }
 
 export default en

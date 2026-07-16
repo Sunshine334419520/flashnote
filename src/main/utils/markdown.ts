@@ -22,6 +22,7 @@ interface NoteFrontmatter {
   is_manually_edited: boolean
   structured_data?: Record<string, unknown>
   sync_rev?: number
+  base_rev?: number
 }
 
 /**
@@ -40,7 +41,8 @@ export function serializeNote(note: Note): string {
     updated_at: note.updatedAt,
     is_classified: note.isClassified,
     is_manually_edited: note.isManuallyEdited,
-    sync_rev: note.syncRev
+    sync_rev: note.syncRev ?? 0,
+    base_rev: note.baseRev ?? 0
   }
 
   if (note.description) frontmatter.description = note.description
@@ -79,6 +81,7 @@ export function parseNote(rawContent: string): Note {
     isClassified: fm.is_classified ?? false,
     isManuallyEdited: fm.is_manually_edited ?? false,
     status: (fm.status as 'draft' | 'published') ?? 'draft',
-    syncRev: fm.sync_rev ?? 0
+    syncRev: fm.sync_rev ?? 0,
+    baseRev: fm.base_rev ?? 0
   }
 }

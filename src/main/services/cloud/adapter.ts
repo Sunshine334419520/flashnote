@@ -75,6 +75,7 @@ export interface NoteMeta {
   id: string
   rev: number
   ca: string
+  ua: string
   ic: boolean
   me: boolean
   sh: string

@@ -4,6 +4,7 @@ import { useCloudSyncStore } from '../../stores/cloudSyncStore'
 import { useFormatTime } from '../../hooks/useFormatTime'
 import { useT } from '../../i18n'
 import { cn } from '../../lib/cn'
+import type { CloudConnection, SyncProgress } from '../../../shared/types'
 
 export function CloudSyncSettings(): ReactElement {
   const connection = useCloudSyncStore((s) => s.connection)
@@ -22,6 +23,18 @@ export function CloudSyncSettings(): ReactElement {
   useEffect(() => {
     fetchStatus()
   }, [fetchStatus])
+
+  // Listen for cloud status changes from the main process (settings window
+  // is a separate BrowserWindow, so it needs its own IPC event listeners).
+  useEffect(() => {
+    const unsubStatus = window.electronAPI.on('event:cloud-status-changed', (data: unknown) => {
+      useCloudSyncStore.getState().setConnection(data as CloudConnection | null)
+    })
+    const unsubProgress = window.electronAPI.on('event:cloud-sync-progress', (data: unknown) => {
+      useCloudSyncStore.getState().setSyncProgress(data as SyncProgress | null)
+    })
+    return () => { unsubStatus(); unsubProgress() }
+  }, [])
 
   const isConnected = connection?.status === 'connected'
   const isConnecting = connection?.status === 'connecting'
@@ -166,7 +179,8 @@ export function CloudSyncSettings(): ReactElement {
         )}
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2 pt-1">
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center gap-2">
           {isConnected ? (
             <>
               <button
@@ -179,7 +193,7 @@ export function CloudSyncSettings(): ReactElement {
                 )}
               >
                 <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-                {t('cloud.syncNow')}
+                {isSyncing ? t('cloud.syncing') : t('cloud.syncNow')}
               </button>
               <button
                 onClick={handleDisconnect}
@@ -206,6 +220,17 @@ export function CloudSyncSettings(): ReactElement {
               )}
               {isConnecting ? t('cloud.connecting') : t('cloud.connect')}
             </button>
+          )}
+          </div>
+
+          {/* Sync progress bar */}
+          {isSyncing && syncProgress && syncProgress.total > 0 && (
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-300"
+                style={{ width: `${Math.round((syncProgress.current / syncProgress.total) * 100)}%` }}
+              />
+            </div>
           )}
         </div>
       </div>

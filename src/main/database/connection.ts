@@ -74,6 +74,9 @@ function runMigrations(database: Database.Database): void {
   if (version < 7) {
     applyMigration007(database)
   }
+  if (version < 8) {
+    applyMigration008(database)
+  }
 }
 
 function applyMigration001(database: Database.Database): void {
@@ -293,4 +296,15 @@ function applyMigration007(database: Database.Database): void {
   }
 
   database.prepare('INSERT INTO _schema_version (version) VALUES (7)').run()
+}
+
+function applyMigration008(database: Database.Database): void {
+  // Add base_rev column for conflict detection in cloud sync
+  try {
+    database.exec(`ALTER TABLE notes ADD COLUMN base_rev INTEGER NOT NULL DEFAULT 0`)
+  } catch {
+    // Column already exists — ignore
+  }
+
+  database.prepare('INSERT INTO _schema_version (version) VALUES (8)').run()
 }

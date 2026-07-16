@@ -19,6 +19,7 @@ export interface NoteRow {
   content_hash: string
   word_count: number
   sync_rev: number
+  base_rev: number
 }
 
 export interface TagRow {

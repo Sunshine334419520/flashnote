@@ -68,8 +68,8 @@ export function insertNote(note: Note): void {
   const contentPreview = note.content.length > 2000 ? note.content.slice(0, 2000) : note.content
 
   db.prepare(`
-    INSERT INTO notes (id, type, title, content, category, source_hint, status, sensitive, typed_data, created_at, updated_at, is_classified, is_manually_edited, content_hash, word_count, sync_rev)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO notes (id, type, title, content, category, source_hint, status, sensitive, typed_data, created_at, updated_at, is_classified, is_manually_edited, content_hash, word_count, sync_rev, base_rev)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     note.id,
     note.type,
@@ -86,7 +86,8 @@ export function insertNote(note: Note): void {
     note.isManuallyEdited ? 1 : 0,
     contentHash,
     wordCount,
-    note.syncRev ?? 0
+    note.syncRev ?? 0,
+    note.baseRev ?? 0
   )
 
   // Update FTS index with content text
@@ -112,7 +113,7 @@ export function updateNote(note: Note): void {
   db.prepare(`
     UPDATE notes SET
       type = ?, title = ?, content = ?, category = ?, source_hint = ?, status = ?, sensitive = ?, typed_data = ?, updated_at = ?,
-      is_classified = ?, is_manually_edited = ?, content_hash = ?, word_count = ?, sync_rev = ?
+      is_classified = ?, is_manually_edited = ?, content_hash = ?, word_count = ?, sync_rev = ?, base_rev = ?
     WHERE id = ?
   `).run(
     note.type,
@@ -129,6 +130,7 @@ export function updateNote(note: Note): void {
     contentHash,
     wordCount,
     note.syncRev ?? 0,
+    note.baseRev ?? 0,
     note.id
   )
 
@@ -424,6 +426,7 @@ function rowToNote(row: NoteRow): Note {
     isClassified: row.is_classified === 1,
     isManuallyEdited: row.is_manually_edited === 1,
     status: (row.status as 'draft' | 'published') ?? 'draft',
-    syncRev: row.sync_rev ?? 0
+    syncRev: row.sync_rev ?? 0,
+    baseRev: row.base_rev ?? 0
   }
 }

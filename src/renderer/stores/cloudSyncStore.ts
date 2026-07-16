@@ -1,20 +1,17 @@
 import { create } from 'zustand'
 import type { CloudConnection, CloudServiceType, SyncProgress, SyncResult } from '../../shared/types'
 
-export interface SyncRecord {
-  id: string
+export interface LastSyncResult {
   status: 'success' | 'failed'
   message: string
-  createdAt: string
+  at: string
 }
-
-const MAX_RECORDS = 60
 
 interface CloudSyncState {
   connection: CloudConnection | null
   syncProgress: SyncProgress | null
   isLoading: boolean
-  syncRecords: SyncRecord[]
+  lastSyncResult: LastSyncResult | null
 
   fetchStatus: () => Promise<void>
   connect: (service: CloudServiceType) => Promise<void>
@@ -24,14 +21,14 @@ interface CloudSyncState {
 
   setConnection: (connection: CloudConnection | null) => void
   setSyncProgress: (progress: SyncProgress | null) => void
-  addSyncRecord: (record: SyncRecord) => void
+  setLastSyncResult: (result: LastSyncResult | null) => void
 }
 
 export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
   connection: null,
   syncProgress: null,
   isLoading: false,
-  syncRecords: [],
+  lastSyncResult: null,
 
   fetchStatus: async () => {
     set({ isLoading: true })
@@ -49,7 +46,6 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
       const { connection, authUrl } = await window.electronAPI.cloud.connect(service)
       set({ connection, isLoading: false })
 
-      // Open the browser for OAuth
       if (authUrl) {
         await window.electronAPI.shell.openExternal(authUrl)
       }
@@ -64,7 +60,7 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
     set({ isLoading: true })
     try {
       await window.electronAPI.cloud.disconnect()
-      set({ connection: null, syncProgress: null })
+      set({ connection: null, syncProgress: null, lastSyncResult: null })
     } catch (err) {
       console.error('Failed to disconnect cloud:', err)
     } finally {
@@ -75,23 +71,23 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
   sync: async () => {
     try {
       const result = await window.electronAPI.cloud.sync()
-      get().addSyncRecord({
-        id: crypto.randomUUID(),
+      const outcome: LastSyncResult = {
         status: result.errors.length === 0 ? 'success' : 'failed',
         message: result.errors.length === 0
           ? `${result.pushed} up, ${result.pulled} down`
           : result.errors[0],
-        createdAt: new Date().toISOString()
-      })
+        at: new Date().toISOString()
+      }
+      set({ lastSyncResult: outcome })
       return result
     } catch (err) {
-      console.error('Sync failed:', err)
-      get().addSyncRecord({
-        id: crypto.randomUUID(),
+      const outcome: LastSyncResult = {
         status: 'failed',
         message: (err as Error).message,
-        createdAt: new Date().toISOString()
-      })
+        at: new Date().toISOString()
+      }
+      set({ lastSyncResult: outcome })
+      console.error('Sync failed:', err)
       return null
     }
   },
@@ -99,6 +95,12 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
   pull: async () => {
     try {
       const result = await window.electronAPI.cloud.pull()
+      const outcome: LastSyncResult = {
+        status: 'success',
+        message: `${result.imported} imported`,
+        at: new Date().toISOString()
+      }
+      set({ lastSyncResult: outcome })
       return result.imported
     } catch (err) {
       console.error('Pull failed:', err)
@@ -110,9 +112,5 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
 
   setSyncProgress: (progress) => set({ syncProgress: progress }),
 
-  addSyncRecord: (record) => {
-    set((s) => ({
-      syncRecords: [record, ...s.syncRecords].slice(0, MAX_RECORDS)
-    }))
-  }
+  setLastSyncResult: (result) => set({ lastSyncResult: result })
 }))
