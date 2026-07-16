@@ -17,7 +17,8 @@ const sampleNote: Note = {
   updatedAt: '2026-06-25T00:00:00.000Z',
   isClassified: true,
   isManuallyEdited: false,
-  status: 'published'
+  status: 'published',
+  syncRev: 0
 }
 
 describe('markdown serialize/parse round-trip', () => {

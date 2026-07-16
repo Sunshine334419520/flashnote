@@ -60,7 +60,8 @@ export function createNote(request: NoteCreateRequest, classification?: {
     updatedAt: now,
     isClassified: !!classification,
     isManuallyEdited: false,
-    status: classification?.status ?? 'draft'
+    status: classification?.status ?? 'draft',
+    syncRev: 0
   }
 
   // Write to disk
@@ -108,7 +109,8 @@ export function modifyNote(request: NoteUpdateRequest): Note {
     tags: request.tags ?? existing.tags,
     status: request.status ?? existing.status,
     updatedAt: now,
-    isManuallyEdited: true
+    isManuallyEdited: true,
+    syncRev: (existing.syncRev ?? 0) + 1
   }
 
   // Write to disk

@@ -1,13 +1,8 @@
-import { ipcMain, webContents } from 'electron'
+import { ipcMain } from 'electron'
 import { IPC_CHANNELS } from '../../shared/ipc-channels'
 import { getConfig, setConfig, getAllConfig } from '../services/config.service'
 import { safeHandler } from '../utils/safeHandler'
-
-function broadcast(channel: string, data: unknown): void {
-  for (const wc of webContents.getAllWebContents()) {
-    wc.send(channel, data)
-  }
-}
+import { broadcast } from '../utils/broadcast'
 
 export interface SettingsCallbacks {
   onHotkeyChange: (hotkey: string) => boolean

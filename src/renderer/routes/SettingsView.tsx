@@ -1,5 +1,6 @@
 import { type ReactElement, useState, useEffect, useCallback } from 'react'
 import { AIProviderSettings } from '../components/settings/AIProviderSettings'
+import { CloudSyncSettings } from '../components/settings/CloudSyncSettings'
 import { ThemeSelector } from '../components/settings/ThemeSelector'
 import { LanguageSelector } from '../components/settings/LanguageSelector'
 import { ShortcutSelector } from '../components/settings/ShortcutSelector'
@@ -39,6 +40,8 @@ export function SettingsView(): ReactElement {
         <ShortcutSelector current={hotkey} onChange={handleHotkeyChange} />
         <div className="border-t border-border" />
         <AIProviderSettings />
+        <div className="border-t border-border" />
+        <CloudSyncSettings />
       </div>
     </div>
   )

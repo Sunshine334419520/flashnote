@@ -69,13 +69,15 @@ PascalCase for all component files: `TextCard.tsx`, `SearchBar.tsx`, `CardWall.t
 
 ### Import Order
 
+Groups in order, blank line between groups, alphabetically within each group:
+
 ```
-1. React / React hooks           import { type ReactElement, useState } from 'react'
-2. Store imports                  import { useNoteStore } from '../../stores/noteStore'
-3. Local components               import { CardFactory } from './CardFactory'
-4. Library imports                import { FileText } from 'lucide-react'
-5. Shared types (type-only)       import type { Note } from '../../../shared/types'
-6. Local utilities / data          import { cn } from '../../lib/cn'
+1. React / React hooks
+2. Store imports
+3. Local components
+4. Library imports (lucide, …)
+5. Shared types (type-only)
+6. Local utilities / data (cn, i18n, hooks, …)
 ```
 
 Use relative paths (`../../shared/types`), not the `@shared` alias (configured but unused).
@@ -99,6 +101,13 @@ try {
 
 - try-catch wrapping async IPC calls, with `console.error` + state reset
 - `ErrorBoundary` class component wraps the entire app (in `App.tsx`)
+
+### Main Process
+
+- **IPC**: `ipcMain.handle` + `safeHandler()` for every handler. Each feature exports a `register*Ipc(deps)` function, registered in `ipc/index.ts`.
+- **Broadcast**: use `broadcast()` from `src/main/utils/broadcast.ts`. Never redefine it locally.
+- **Services**: pure TypeScript, never import `electron`. Dependencies via constructor/parameters.
+- **DB migrations**: standalone `applyMigration00N(database)` functions in `database/connection.ts`. Version tracked in `_schema_version` table. Add columns with `try { ALTER TABLE } catch { /* exists */ }`.
 
 ### Tailwind / CSS
 
@@ -134,7 +143,7 @@ try {
 
 ## Typography (v2 UI)
 
-Semantic type scale defined as `--text-*` tokens in `globals.css` `@theme` (same pattern as the color tokens). **Use the named sizes — not `text-[Npx]` and not raw `text-xs/sm/base/lg`.**
+Semantic type scale defined as `--text-*` tokens in `globals.css` `@theme`. **Use the named sizes — not `text-[Npx]` and not raw `text-xs/sm/base/lg`.**
 
 ### Size Scale
 
@@ -168,7 +177,7 @@ Inline: `12` (small) · `14` (default) · `16` (large). Empty-state illustration
 - Translation files: `src/renderer/i18n/zh-CN.ts` and `en.ts`. Flat key-value, no nesting.
 - Hook: `import { useT } from '../i18n'` → `const { t } = useT()` → `t('card.copy')`.
 - Parameters: `t('time.minutesAgo', { n: 5 })` → `"5分钟前"` / `"5m ago"`.
-- Time formatting: use `useFormatTime()` hook instead of a local `formatRelativeTime`.
+- Time formatting: use `useFormatTime()` hook. Never write a local `formatTime` — it breaks i18n.
 - Key naming: `category.thing` — e.g. `card.copy`, `search.placeholder`, `type.apikey`.
 - New key: add to `zh-CN.ts` first (it defines the `Translations` type), then `en.ts`.
 - Language persists in `config.json` → `language` field. Settings UI has a `LanguageSelector`.

@@ -48,6 +48,13 @@ export const IPC_CHANNELS = {
   // Task
   TASK_LIST: 'task:list',
 
+  // Cloud Sync
+  CLOUD_CONNECT: 'cloud:connect',
+  CLOUD_DISCONNECT: 'cloud:disconnect',
+  CLOUD_GET_STATUS: 'cloud:get-status',
+  CLOUD_SYNC: 'cloud:sync',
+  CLOUD_PULL: 'cloud:pull',
+
   // Events (main → renderer push)
   EVENT_NOTE_CREATED: 'event:note-created',
   EVENT_NOTE_UPDATED: 'event:note-updated',
@@ -56,7 +63,9 @@ export const IPC_CHANNELS = {
   EVENT_SETTINGS_CHANGED: 'event:settings-changed',
   EVENT_TASK_CREATED: 'event:task-created',
   EVENT_TASK_COMPLETED: 'event:task-completed',
-  EVENT_TASK_FAILED: 'event:task-failed'
+  EVENT_TASK_FAILED: 'event:task-failed',
+  EVENT_CLOUD_STATUS_CHANGED: 'event:cloud-status-changed',
+  EVENT_CLOUD_SYNC_PROGRESS: 'event:cloud-sync-progress'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

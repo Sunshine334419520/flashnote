@@ -9,6 +9,7 @@ import { initStorageService } from './services/storage.service'
 import { AIService } from './services/ai'
 import { AICommandService } from './services/ai/command.service'
 import { TaskManager } from './services/task-manager'
+import { CloudSyncService } from './services/cloud/cloud-sync.service'
 import { initLogger, logger } from './utils/logger'
 import { closeDatabase } from './database/connection'
 import { createAppMenu, createTrayMenu } from './menu'
@@ -275,7 +276,7 @@ function createTray(): void {
 // Service initialization
 // ============================================================
 
-function initServices(): { storagePath: string; aiService: AIService; aiCommandService: AICommandService; taskManager: TaskManager } {
+function initServices(): { storagePath: string; aiService: AIService; aiCommandService: AICommandService; taskManager: TaskManager; cloudSyncService: CloudSyncService } {
   const storagePath = getDefaultStoragePath()
 
   // Ensure ~/FlashNote/ exists with all subdirectories
@@ -307,9 +308,12 @@ function initServices(): { storagePath: string; aiService: AIService; aiCommandS
   // Initialize task manager (in-memory only)
   const taskManager = new TaskManager()
 
+  // Initialize cloud sync service
+  const cloudSyncService = new CloudSyncService()
+
   logger.info('main:init', 'Services initialized', { storagePath })
 
-  return { storagePath, aiService, aiCommandService, taskManager }
+  return { storagePath, aiService, aiCommandService, taskManager, cloudSyncService }
 }
 
 // Set app name BEFORE ready — affects Dock tooltip and menu bar name
@@ -320,7 +324,7 @@ app.setName(app.getLocale().startsWith('zh') ? '闪记' : 'FlashNote')
 // ============================================================
 
 app.whenReady().then(() => {
-  const { storagePath, aiService, aiCommandService, taskManager } = initServices()
+  const { storagePath, aiService, aiCommandService, taskManager, cloudSyncService } = initServices()
   _aiService = aiService
 
   // Read hotkey from config (falls back to DEFAULT_HOTKEY on first run)
@@ -334,6 +338,7 @@ app.whenReady().then(() => {
     aiService,
     aiCommandService,
     taskManager,
+    cloudSyncService,
     showQuickCaptureWindow,
     hideQuickCaptureWindow,
     showSettingsWindow,
@@ -342,6 +347,9 @@ app.whenReady().then(() => {
       onHotkeyChange: updateGlobalShortcut
     }
   })
+
+  // Start cloud sync polling if a connection exists
+  cloudSyncService.startPolling()
 
   createMainWindow()
   createQuickCaptureWindow()

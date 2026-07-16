@@ -18,6 +18,7 @@ export interface NoteRow {
   is_manually_edited: number // 0 | 1
   content_hash: string
   word_count: number
+  sync_rev: number
 }
 
 export interface TagRow {
@@ -41,5 +42,22 @@ export interface CategoryRow {
 export interface SettingRow {
   key: string
   value: string
+  updated_at: string
+}
+
+export interface CloudConnectionRow {
+  id: string
+  service: string
+  access_token: string
+  workspace_id: string | null
+  workspace_name: string | null
+  account_name: string | null
+  account_email: string | null
+  database_id: string | null
+  database_url: string | null
+  last_sync_at: string | null
+  status: string
+  error: string | null
+  created_at: string
   updated_at: string
 }
