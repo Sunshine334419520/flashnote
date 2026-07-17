@@ -44,13 +44,17 @@ export class CloudSyncService {
 
   /**
    * Start the OAuth flow for a given service.
-   * 1. Start local HTTP server
-   * 2. Open browser to provider's auth URL
-   * 3. Wait for callback
-   * 4. Exchange code for token
-   * 5. Ensure remote database exists
-   * 6. Save connection to SQLite
-   * 7. Full upload
+   * Only one service can be connected at a time. If another service is
+   * already connected, disconnect it first (resets baseRev → clean state).
+   *
+   * 1. Disconnect any existing connection (baseRev=0 + delete old rows)
+   * 2. Start local HTTP server
+   * 3. Open browser to provider's auth URL
+   * 4. Wait for callback
+   * 5. Exchange code for token
+   * 6. Ensure remote database exists
+   * 7. Save connection to SQLite
+   * 8. Full sync
    */
   async connect(service: CloudServiceType): Promise<CloudConnection> {
     if (service !== 'notion') {
@@ -60,6 +64,12 @@ export class CloudSyncService {
     if (!NOTION_CLIENT_ID || !NOTION_CLIENT_SECRET) {
       throw new Error('Notion OAuth credentials not configured. Set NOTION_CLIENT_ID and NOTION_CLIENT_SECRET.')
     }
+
+    // 0. If already connected to another service, disconnect first.
+    //    This stops polling, resets all notes' baseRev to 0, and
+    //    removes the old connection row so the new service sees a
+    //    clean slate (no stale remote-delete detection, no version skew).
+    await this.disconnect()
 
     const authServer = new OAuthServer()
 
@@ -74,12 +84,16 @@ export class CloudSyncService {
 
       logger.info('cloud:service', `OAuth URL ready at port ${port}`)
 
-      // 3. Create temporary connection row (status: connecting)
+      // 3. Delete any lingering rows (disconnect only removes active one; be safe)
+      const db = getDatabase()
+      db.prepare('DELETE FROM cloud_connections').run()
+
+      // 4. Create temporary connection row (status: connecting)
       const tempId = uuidv4()
       const now = new Date().toISOString()
       this.upsertConnection({
         id: tempId,
-        service: 'notion',
+        service,
         access_token: '',
         workspace_id: null,
         workspace_name: null,
@@ -96,12 +110,12 @@ export class CloudSyncService {
 
       broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, {
         id: tempId,
-        service: 'notion',
+        service,
         status: 'connecting'
       })
 
-      // 4. Store pending auth state + start background wait for callback
-      this.pendingAuth = { server: authServer, state, redirectUri, tempId, authUrl }
+      // 5. Store pending auth state + start background wait for callback
+      this.pendingAuth = { server: authServer, state, redirectUri, tempId, authUrl, service }
 
       // Fire-and-forget: wait for the browser callback, then complete auth
       authServer.waitForCallback()
@@ -113,10 +127,10 @@ export class CloudSyncService {
           authServer.stop()
         })
 
-      // 5. Return immediately — renderer opens the browser with authUrl
+      // 6. Return immediately — renderer opens the browser with authUrl
       return {
         id: tempId,
-        service: 'notion',
+        service,
         status: 'connecting',
         createdAt: now
       }
@@ -135,7 +149,7 @@ export class CloudSyncService {
     if (!pending) return
 
     this.pendingAuth = null
-    const { server, redirectUri, tempId } = pending
+    const { server, redirectUri, tempId, service } = pending
 
     try {
       // Exchange code for token
@@ -147,7 +161,7 @@ export class CloudSyncService {
       const now = new Date().toISOString()
       const connRow: CloudConnectionRow = {
         id: tempId,
-        service: 'notion',
+        service,
         access_token: authResult.accessToken,
         workspace_id: authResult.workspaceId,
         workspace_name: authResult.workspaceName,
@@ -218,6 +232,11 @@ export class CloudSyncService {
     this.clearPushQueue()
 
     const db = getDatabase()
+
+    // Reset all notes' baseRev to 0 — old remote version numbers are
+    // meaningless after switching to a different cloud service.
+    db.prepare('UPDATE notes SET base_rev = 0').run()
+
     const conn = this.getActiveConnection()
     if (conn) {
       db.prepare('DELETE FROM cloud_connections WHERE id = ?').run(conn.id)
@@ -416,6 +435,7 @@ export class CloudSyncService {
     redirectUri: string
     tempId: string
     authUrl: string
+    service: CloudServiceType
   } | null = null
 
   /**
