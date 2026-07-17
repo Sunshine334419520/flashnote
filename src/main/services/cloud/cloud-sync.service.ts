@@ -12,8 +12,10 @@ import { IPC_CHANNELS } from '../../../shared/ipc-channels'
 import type { CloudConnectionRow } from '../../database/schema'
 import { OAuthServer } from './auth-server'
 import { NotionAdapter } from './notion.adapter'
+import { OnenoteAdapter } from './onenote.adapter'
 import { SyncEngine } from './sync-engine'
 import type { CloudSyncAdapter } from './adapter'
+import type { ConnectionConfig } from './sync-engine'
 
 /**
  * Central orchestrator for cloud sync. Owns the full lifecycle:
@@ -22,8 +24,8 @@ import type { CloudSyncAdapter } from './adapter'
  * IPC handlers call this service; the service never imports Electron.
  */
 export class CloudSyncService {
-  private adapter: CloudSyncAdapter
-  private syncEngine: SyncEngine
+  private adapter: CloudSyncAdapter | null = null
+  private syncEngine: SyncEngine | null = null
   private pollTimer: ReturnType<typeof setInterval> | null = null
 
   // Debounce queue for auto-sync after note changes
@@ -34,8 +36,18 @@ export class CloudSyncService {
     adapter?: CloudSyncAdapter,
     syncEngine?: SyncEngine
   ) {
-    this.adapter = adapter ?? new NotionAdapter()
-    this.syncEngine = syncEngine ?? new SyncEngine(this.adapter)
+    if (adapter) this.adapter = adapter
+    if (syncEngine) this.syncEngine = syncEngine
+    // No default — adapter is set on connect() or initFromConnection()
+  }
+
+  /** Resolve the right adapter for a given cloud service. */
+  private adapterFor(service: CloudServiceType): CloudSyncAdapter {
+    switch (service) {
+      case 'notion': return new NotionAdapter()
+      case 'onenote': return new OnenoteAdapter()
+      default: throw new Error(`Unsupported cloud service: ${service}`)
+    }
   }
 
   // ==========================================================
@@ -57,19 +69,15 @@ export class CloudSyncService {
    * 8. Full sync
    */
   async connect(service: CloudServiceType): Promise<CloudConnection> {
-    if (service !== 'notion') {
-      throw new Error(`Unsupported service: ${service}`)
-    }
-
-    if (!NOTION_CLIENT_ID || !NOTION_CLIENT_SECRET) {
-      throw new Error('Notion OAuth credentials not configured. Set NOTION_CLIENT_ID and NOTION_CLIENT_SECRET.')
-    }
-
     // 0. If already connected to another service, disconnect first.
     //    This stops polling, resets all notes' baseRev to 0, and
     //    removes the old connection row so the new service sees a
     //    clean slate (no stale remote-delete detection, no version skew).
     await this.disconnect()
+
+    // 0.5. Select the right adapter for this service
+    this.adapter = this.adapterFor(service)
+    this.syncEngine = new SyncEngine(this.adapter)
 
     const authServer = new OAuthServer()
 
@@ -80,7 +88,7 @@ export class CloudSyncService {
 
       // 2. Build auth URL
       const state = uuidv4()
-      const authUrl = this.adapter.getAuthUrl(state, redirectUri)
+      const authUrl = this.adapter!.getAuthUrl(state, redirectUri)
 
       logger.info('cloud:service', `OAuth URL ready at port ${port}`)
 
@@ -102,6 +110,8 @@ export class CloudSyncService {
         database_id: null,
         database_url: null,
         last_sync_at: null,
+        refresh_token: null,
+        token_expires_at: null,
         status: 'connecting',
         error: null,
         created_at: now,
@@ -153,10 +163,10 @@ export class CloudSyncService {
 
     try {
       // Exchange code for token
-      const authResult = await this.adapter.exchangeCode(code, redirectUri)
+      const authResult = await this.adapter!.exchangeCode(code, redirectUri)
 
       // Ensure database exists
-      const dbInfo = await this.adapter.ensureDatabase(authResult.accessToken)
+      const dbInfo = await this.adapter!.ensureDatabase(authResult.accessToken)
 
       const now = new Date().toISOString()
       const connRow: CloudConnectionRow = {
@@ -170,6 +180,8 @@ export class CloudSyncService {
         database_id: dbInfo.id,
         database_url: dbInfo.url,
         last_sync_at: null,
+        refresh_token: authResult.refreshToken ?? null,
+        token_expires_at: authResult.expiresAt ? String(authResult.expiresAt) : null,
         status: 'connected',
         error: null,
         created_at: now,
@@ -185,7 +197,7 @@ export class CloudSyncService {
       try {
         const conn = this.getActiveConnection()
         if (conn) {
-          const result = await this.syncEngine.syncAll({
+          const result = await this.syncEngine!.syncAll({
             accessToken: conn.access_token,
             databaseId: conn.database_id!
           })
@@ -254,22 +266,73 @@ export class CloudSyncService {
   // Sync operations
   // ==========================================================
 
-  /** Manual full sync. */
-  async syncNow(): Promise<SyncResult> {
+  /**
+   * Ensure the access token is fresh. For OAuth providers with expiring
+   * tokens (OneNote), refresh it via the adapter before returning.
+   * For Notion (non-expiring), just return the stored token.
+   */
+  private async ensureFreshToken(): Promise<ConnectionConfig> {
     const conn = this.getActiveConnection()
     if (!conn || conn.status !== 'connected') {
       throw new Error('Not connected to cloud')
     }
 
+    // Notion: no refresh_token → token is long-lived. Return as-is.
+    if (!conn.refresh_token) {
+      return { accessToken: conn.access_token, databaseId: conn.database_id! }
+    }
+
+    // OneNote: check expiry, refresh if near
+    const expiresAt = conn.token_expires_at ? Number(conn.token_expires_at) : 0
+    const now = Date.now()
+    const refreshBuffer = 5 * 60 * 1000 // 5 minutes
+
+    if (now + refreshBuffer < expiresAt) {
+      // Token still fresh
+      return { accessToken: conn.access_token, databaseId: conn.database_id! }
+    }
+
+    // Token expired or near expiry — refresh
+    if (!this.adapter?.refreshAccessToken) {
+      logger.warn('cloud:service', 'Token expired but adapter has no refreshAccessToken')
+      return { accessToken: conn.access_token, databaseId: conn.database_id! }
+    }
+
+    try {
+      logger.info('cloud:service', 'Refreshing access token')
+      const fresh = await this.adapter.refreshAccessToken(conn.refresh_token)
+
+      // Update connection row with fresh tokens
+      const db = getDatabase()
+      db.prepare(
+        `UPDATE cloud_connections SET access_token = ?, refresh_token = ?,
+          token_expires_at = ?, updated_at = datetime('now') WHERE id = ?`
+      ).run(
+        fresh.accessToken,
+        fresh.refreshToken ?? null,
+        fresh.expiresAt ? String(fresh.expiresAt) : null,
+        conn.id
+      )
+
+      return { accessToken: fresh.accessToken, databaseId: conn.database_id! }
+    } catch (err) {
+      logger.error('cloud:service', 'Token refresh failed', { error: String(err) })
+      // Return stale token — next sync will naturally fail with 401
+      return { accessToken: conn.access_token, databaseId: conn.database_id! }
+    }
+  }
+
+  /** Manual full sync. */
+  async syncNow(): Promise<SyncResult> {
+    const config = await this.ensureFreshToken()
+
     this.broadcastProgress('comparing', 0, 0)
     const startedAt = Date.now()
 
-    const result = await this.syncEngine.syncAll({
-      accessToken: conn.access_token,
-      databaseId: conn.database_id!
-    })
+    const result = await this.syncEngine!.syncAll(config)
 
-    this.updateLastSync(conn.id)
+    const conn = this.getActiveConnection()
+    if (conn) this.updateLastSync(conn.id)
     this.finishPollSync(startedAt, () => {
       broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
     })
@@ -279,19 +342,14 @@ export class CloudSyncService {
 
   /** Full pull for device recovery. */
   async pullAll(): Promise<{ imported: number }> {
-    const conn = this.getActiveConnection()
-    if (!conn || conn.status !== 'connected') {
-      throw new Error('Not connected to cloud')
-    }
+    const config = await this.ensureFreshToken()
 
     this.broadcastProgress('pulling', 0, 0)
 
-    const result = await this.syncEngine.pullAll({
-      accessToken: conn.access_token,
-      databaseId: conn.database_id!
-    })
+    const result = await this.syncEngine!.pullAll(config)
 
-    this.updateLastSync(conn.id)
+    const conn = this.getActiveConnection()
+    if (conn) this.updateLastSync(conn.id)
     this.broadcastProgress('idle', 0, 0)
 
     return result
@@ -323,8 +381,14 @@ export class CloudSyncService {
   }
 
   private async flushPushQueue(): Promise<void> {
-    const conn = this.getActiveConnection()
-    if (!conn || conn.status !== 'connected' || this.pushQueue.size === 0) return
+    if (this.pushQueue.size === 0) return
+
+    let config: ConnectionConfig
+    try {
+      config = await this.ensureFreshToken()
+    } catch {
+      return // Not connected
+    }
 
     const queue = new Map(this.pushQueue)
     this.pushQueue.clear()
@@ -335,15 +399,9 @@ export class CloudSyncService {
     for (const [noteId, action] of queue) {
       try {
         if (action === 'delete') {
-          await this.syncEngine.deleteRemoteNote(
-            { accessToken: conn.access_token, databaseId: conn.database_id! },
-            noteId
-          )
+          await this.syncEngine!.deleteRemoteNote(config, noteId)
         } else {
-          await this.syncEngine.pushNote(
-            { accessToken: conn.access_token, databaseId: conn.database_id! },
-            noteId
-          )
+          await this.syncEngine!.pushNote(config, noteId)
         }
       } catch (err) {
         logger.error('cloud:service', `Auto-sync failed for ${noteId}`, { error: String(err) })
@@ -352,7 +410,8 @@ export class CloudSyncService {
       this.broadcastProgress('pushing', done, queue.size)
     }
 
-    this.updateLastSync(conn.id)
+    const conn = this.getActiveConnection()
+    if (conn) this.updateLastSync(conn.id)
     this.broadcastProgress('idle', 0, 0)
     broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
   }
@@ -368,6 +427,21 @@ export class CloudSyncService {
 
   startPolling(): void {
     if (this.pollTimer) return
+
+    // Init adapter from existing connection (for app restart, no connect() called)
+    if (!this.adapter) {
+      const conn = this.getActiveConnection()
+      if (conn) {
+        const service = conn.service as CloudServiceType
+        this.adapter = this.adapterFor(service)
+        this.syncEngine = new SyncEngine(this.adapter)
+        // Restore OneNote sectionId from stored connection
+        if (service === 'onenote' && conn.database_id) {
+          (this.adapter as OnenoteAdapter).sectionId = conn.database_id
+        }
+      }
+    }
+
     this.pollTimer = setInterval(() => {
       this.pollSyncOnce()
     }, 60 * 60 * 1000) // 1 hour
@@ -376,9 +450,11 @@ export class CloudSyncService {
     this.pollSyncOnce()
   }
 
-  private pollSyncOnce(): void {
-    const conn = this.getActiveConnection()
-    if (!conn || conn.status !== 'connected') {
+  private async pollSyncOnce(): Promise<void> {
+    let config: ConnectionConfig
+    try {
+      config = await this.ensureFreshToken()
+    } catch {
       logger.info('cloud:service', 'Poll skipped: not connected')
       return
     }
@@ -387,11 +463,9 @@ export class CloudSyncService {
     this.broadcastProgress('comparing', 0, 0)
     const startedAt = Date.now()
 
-    this.syncEngine.syncAll({
-      accessToken: conn.access_token,
-      databaseId: conn.database_id!
-    }).then((result) => {
-      this.updateLastSync(conn.id)
+    const conn = this.getActiveConnection()
+    this.syncEngine!.syncAll(config).then((result) => {
+      if (conn) this.updateLastSync(conn.id)
       this.finishPollSync(startedAt, () => {
         broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
       })
@@ -444,7 +518,7 @@ export class CloudSyncService {
    */
   getPendingAuthUrl(): { authUrl: string; port: number } | null {
     if (!this.pendingAuth) return null
-    const authUrl = this.adapter.getAuthUrl(this.pendingAuth.state, this.pendingAuth.redirectUri)
+    const authUrl = this.adapter!.getAuthUrl(this.pendingAuth.state, this.pendingAuth.redirectUri)
     return { authUrl, port: this.pendingAuth.server['port'] ?? NOTION_REDIRECT_PORT }
   }
 
@@ -480,11 +554,11 @@ export class CloudSyncService {
     const db = getDatabase()
     db.prepare(`
       INSERT INTO cloud_connections (id, service, access_token, workspace_id, workspace_name,
-        account_name, account_email, database_id, database_url, last_sync_at, status, error,
-        created_at, updated_at)
+        account_name, account_email, database_id, database_url, last_sync_at,
+        refresh_token, token_expires_at, status, error, created_at, updated_at)
       VALUES (@id, @service, @access_token, @workspace_id, @workspace_name,
-        @account_name, @account_email, @database_id, @database_url, @last_sync_at, @status, @error,
-        @created_at, @updated_at)
+        @account_name, @account_email, @database_id, @database_url, @last_sync_at,
+        @refresh_token, @token_expires_at, @status, @error, @created_at, @updated_at)
       ON CONFLICT(id) DO UPDATE SET
         access_token = @access_token,
         workspace_id = @workspace_id,
@@ -494,6 +568,8 @@ export class CloudSyncService {
         database_id = @database_id,
         database_url = @database_url,
         last_sync_at = @last_sync_at,
+        refresh_token = @refresh_token,
+        token_expires_at = @token_expires_at,
         status = @status,
         error = @error,
         updated_at = @updated_at

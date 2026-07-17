@@ -23,6 +23,7 @@ jobs:
         env:
           FLASHNOTE_NOTION_CLIENT_ID: ${{ vars.FLASHNOTE_NOTION_CLIENT_ID }}
           FLASHNOTE_NOTION_CLIENT_SECRET: ${{ secrets.FLASHNOTE_NOTION_CLIENT_SECRET }}
+          FLASHNOTE_ONENOTE_CLIENT_ID: ${{ vars.FLASHNOTE_ONENOTE_CLIENT_ID }}
       - run: pnpm package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -42,6 +43,7 @@ jobs:
         env:
           FLASHNOTE_NOTION_CLIENT_ID: ${{ vars.FLASHNOTE_NOTION_CLIENT_ID }}
           FLASHNOTE_NOTION_CLIENT_SECRET: ${{ secrets.FLASHNOTE_NOTION_CLIENT_SECRET }}
+          FLASHNOTE_ONENOTE_CLIENT_ID: ${{ vars.FLASHNOTE_ONENOTE_CLIENT_ID }}
       - run: pnpm package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -61,6 +63,7 @@ jobs:
         env:
           FLASHNOTE_NOTION_CLIENT_ID: ${{ vars.FLASHNOTE_NOTION_CLIENT_ID }}
           FLASHNOTE_NOTION_CLIENT_SECRET: ${{ secrets.FLASHNOTE_NOTION_CLIENT_SECRET }}
+          FLASHNOTE_ONENOTE_CLIENT_ID: ${{ vars.FLASHNOTE_ONENOTE_CLIENT_ID }}
       - run: pnpm package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

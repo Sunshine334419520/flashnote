@@ -181,7 +181,7 @@ export interface AppConfig {
 // Cloud sync types
 // ============================================================
 
-export type CloudServiceType = 'notion' | 'feishu'
+export type CloudServiceType = 'notion' | 'feishu' | 'onenote'
 
 export interface CloudConnection {
   id: string

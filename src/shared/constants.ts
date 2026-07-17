@@ -62,6 +62,41 @@ export const NOTION_API_BASE = 'https://api.notion.com/v1'
 /** Notion API version header value. */
 export const NOTION_API_VERSION = '2022-06-28'
 
+// ============================================================
+// Cloud sync — OneNote / Microsoft Graph OAuth (public client, PKCE)
+// ============================================================
+
+/**
+ * OneNote / Microsoft Graph Application (client) ID.
+ * Public value — Azure registered public client. Injected at build time.
+ * No client_secret needed — this is a public client using PKCE.
+ */
+export const ONENOTE_CLIENT_ID: string =
+  typeof process !== 'undefined' && process.env != null
+    ? process.env.FLASHNOTE_ONENOTE_CLIENT_ID ?? ''
+    : ''
+
+/** Microsoft OAuth2 authorize URL (consumers tenant for personal Microsoft accounts). */
+export const ONENOTE_AUTH_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize'
+
+/** Microsoft OAuth2 token URL. */
+export const ONENOTE_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
+
+/** Microsoft Graph API base URL. */
+export const ONENOTE_GRAPH_BASE = 'https://graph.microsoft.com/v1.0'
+
+/** Local HTTP server port for OneNote OAuth redirect callback. */
+export const ONENOTE_REDIRECT_PORT = 18924
+
+/** Scopes for OneNote Graph access (Notes.ReadWrite + offline_access for refresh_token). */
+export const ONENOTE_SCOPES = 'Notes.ReadWrite offline_access openid profile'
+
+/** OneNote notebook title created by ensureDatabase. */
+export const ONENOTE_NOTEBOOK_TITLE = 'FlashNote'
+
+/** OneNote section title within the notebook. */
+export const ONENOTE_SECTION_TITLE = 'Notes'
+
 export const MAX_CONTENT_LENGTH_FOR_AI = 8000
 
 export const MAX_TAGS_PER_NOTE = 10

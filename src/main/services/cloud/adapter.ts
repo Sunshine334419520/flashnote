@@ -31,6 +31,14 @@ export interface CloudSyncAdapter {
 
   /** Delete (archive) a note row. */
   deleteNote(accessToken: string, pageId: string): Promise<void>
+
+  /**
+   * Refresh an expired access token using a refresh_token.
+   * Only needed for OAuth providers with expiring tokens (e.g., OneNote).
+   * Returns a fresh AuthResult with new accessToken + refreshToken + expiresAt.
+   * Notion ignores this — its tokens don't expire.
+   */
+  refreshAccessToken?(refreshToken: string): Promise<AuthResult>
 }
 
 // ============================================================
@@ -43,6 +51,10 @@ export interface AuthResult {
   workspaceName: string
   accountName?: string
   accountEmail?: string
+  /** For OAuth providers that expire (OneNote): refresh_token for silent renewal. */
+  refreshToken?: string
+  /** Epoch ms when access_token expires. null/undefined = non-expiring. */
+  expiresAt?: number
 }
 
 export interface UserInfo {

@@ -1,10 +1,10 @@
 import { type ReactElement, useEffect, useCallback, useState } from 'react'
-import { Cloud, CloudAlert, RefreshCw, Link2, ExternalLink, AlertCircle } from 'lucide-react'
+import { Cloud, CloudAlert, RefreshCw, Link2, ExternalLink, AlertCircle, NotepadText } from 'lucide-react'
 import { useCloudSyncStore } from '../../stores/cloudSyncStore'
 import { useFormatTime } from '../../hooks/useFormatTime'
 import { useT } from '../../i18n'
 import { cn } from '../../lib/cn'
-import type { CloudConnection, SyncProgress } from '../../../shared/types'
+import type { CloudConnection, SyncProgress, CloudServiceType } from '../../../shared/types'
 
 export function CloudSyncSettings(): ReactElement {
   const connection = useCloudSyncStore((s) => s.connection)
@@ -37,17 +37,24 @@ export function CloudSyncSettings(): ReactElement {
   }, [])
 
   const isConnected = connection?.status === 'connected'
+  const isNotionConnected = isConnected && connection?.service === 'notion'
+  const isOnenoteConnected = isConnected && connection?.service === 'onenote'
   const isConnecting = connection?.status === 'connecting'
   const isSyncing = syncProgress != null && syncProgress.phase !== 'idle'
 
-  const handleConnect = useCallback(async () => {
+  const [connectingService, setConnectingService] = useState<CloudServiceType | null>(null)
+
+  const handleConnect = useCallback(async (service: CloudServiceType) => {
     setError(null)
+    setConnectingService(service)
     try {
-      await connect('notion')
+      await connect(service)
     } catch (err) {
       const msg = (err as Error).message
       console.error('Connect failed:', msg)
       setError(msg)
+    } finally {
+      setConnectingService(null)
     }
   }, [connect])
 
@@ -92,7 +99,7 @@ export function CloudSyncSettings(): ReactElement {
             <Link2 size={16} className="text-muted-foreground" />
             <span className="text-body font-medium">Notion</span>
           </div>
-          {isConnected ? (
+          {isNotionConnected ? (
             <span className="text-micro font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
               {t('cloud.connected')}
             </span>
@@ -181,7 +188,7 @@ export function CloudSyncSettings(): ReactElement {
         {/* Action buttons */}
         <div className="space-y-2 pt-1">
           <div className="flex items-center gap-2">
-          {isConnected ? (
+          {isNotionConnected ? (
             <>
               <button
                 onClick={handleSync}
@@ -205,7 +212,7 @@ export function CloudSyncSettings(): ReactElement {
             </>
           ) : (
             <button
-              onClick={handleConnect}
+              onClick={() => handleConnect('notion')}
               disabled={isConnecting || isLoading}
               className={cn(
                 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-label font-medium transition-colors',
@@ -235,18 +242,73 @@ export function CloudSyncSettings(): ReactElement {
         </div>
       </div>
 
-      {/* Feishu card (grayed out, coming soon) */}
-      <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 space-y-3 opacity-60">
+      {/* OneNote card */}
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <ExternalLink size={16} className="text-muted-foreground/50" />
-            <span className="text-body font-medium text-muted-foreground">{t('cloud.feishu')}</span>
+            <NotepadText size={16} className="text-highlight" />
+            <span className="text-body font-medium">{t('cloud.onenote')}</span>
           </div>
-          <span className="text-micro font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground/60">
-            {t('cloud.feishuComingSoon')}
-          </span>
+          {isOnenoteConnected ? (
+            <span className="text-micro font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
+              {t('cloud.connected')}
+            </span>
+          ) : isConnecting ? (
+            <span className="text-micro font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600">
+              {t('cloud.connecting')}
+            </span>
+          ) : connection?.status === 'error' ? (
+            <span className="text-micro font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-600">
+              {t('cloud.syncFailed')}
+            </span>
+          ) : (
+            <button
+              onClick={() => handleConnect('onenote')}
+              disabled={isConnecting || isLoading}
+              className={cn(
+                'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-micro font-medium transition-colors',
+                'bg-primary/10 text-primary hover:bg-primary/20',
+                (isConnecting || isLoading) && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              {connectingService === 'onenote' ? (
+                <RefreshCw size={10} className="animate-spin" />
+              ) : null}
+              {connectingService === 'onenote' ? t('cloud.connecting') : t('cloud.connectGeneric')}
+            </button>
+          )}
         </div>
-        <p className="text-label text-muted-foreground/60">{t('cloud.feishuComingSoon')}</p>
+
+        {/* Connected details (only when OneNote is connected) */}
+        {isOnenoteConnected && (
+          <div className="space-y-1.5 text-caption text-muted-foreground">
+            {connection!.accountEmail && (
+              <div className="flex justify-between">
+                <span>{t('cloud.account')}</span>
+                <span className="text-foreground/70">{connection!.accountEmail}</span>
+              </div>
+            )}
+            {connection!.lastSyncAt && (
+              <div className="flex justify-between">
+                <span>{t('cloud.lastSync')}</span>
+                <span className="text-foreground/70">{formatTime(connection!.lastSyncAt)}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Error message */}
+        {connection?.status === 'error' && connection.error && (
+          <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-red-500/10 text-caption text-red-600 dark:text-red-400">
+            <CloudAlert size={14} className="shrink-0 mt-0.5" />
+            <span>{connection.error}</span>
+          </div>
+        )}
+
+        {/* Disconnected description */}
+        {!isOnenoteConnected && !isConnecting && connection?.status !== 'error' && (
+          <p className="text-caption text-muted-foreground">{t('cloud.onenoteHint')}</p>
+        )}
       </div>
     </div>
   )
