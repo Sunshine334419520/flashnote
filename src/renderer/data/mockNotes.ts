@@ -19,6 +19,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -35,6 +37,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -51,6 +55,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -67,6 +73,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -83,6 +91,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
 
@@ -101,6 +111,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -117,6 +129,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -133,6 +147,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: true,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -149,6 +165,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -165,6 +183,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
 
@@ -183,6 +203,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -199,6 +221,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -215,6 +239,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -234,6 +260,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -250,6 +278,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
 
@@ -268,6 +298,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -284,6 +316,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: true,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -300,6 +334,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -316,6 +352,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: false,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
   {
@@ -332,6 +370,8 @@ export const mockNotes: Note[] = [
     isClassified: true,
     isManuallyEdited: true,
     status: 'published',
+    syncRev: 0,
+    baseRev: 0,
     metadata: {},
   },
 ]

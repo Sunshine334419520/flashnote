@@ -1,20 +1,16 @@
-import { ipcMain, webContents } from 'electron'
+import { ipcMain } from 'electron'
 import { IPC_CHANNELS } from '../../shared/ipc-channels'
 import { createNote, readNote, modifyNote, removeNote, getNotes } from '../services/storage.service'
 import type { AIService } from '../services/ai'
 import type { TaskManager } from '../services/task-manager'
+import type { CloudSyncService } from '../services/cloud/cloud-sync.service'
 import type { NoteCreateRequest, NoteUpdateRequest, SearchQuery, TaskInfo } from '../../shared/types'
 import { safeHandler } from '../utils/safeHandler'
 import { logger } from '../utils/logger'
+import { broadcast } from '../utils/broadcast'
 import { heuristicParse } from '../services/ai/base'
 
-function broadcast(channel: string, data: unknown): void {
-  for (const wc of webContents.getAllWebContents()) {
-    wc.send(channel, data)
-  }
-}
-
-export function registerNotesIpc(aiService: AIService, taskManager: TaskManager): void {
+export function registerNotesIpc(aiService: AIService, taskManager: TaskManager, cloudSyncService: CloudSyncService): void {
   ipcMain.handle(
     IPC_CHANNELS.NOTE_CREATE,
     safeHandler('note:create', async (_event, request: NoteCreateRequest) => {
@@ -71,6 +67,7 @@ export function registerNotesIpc(aiService: AIService, taskManager: TaskManager)
 
           // Now broadcast to main list
           broadcast(IPC_CHANNELS.EVENT_NOTE_CREATED, published)
+          cloudSyncService.schedulePush(published.id, 'create')
         })
         .catch((err) => {
           const elapsed = Date.now() - aiStart
@@ -87,6 +84,7 @@ export function registerNotesIpc(aiService: AIService, taskManager: TaskManager)
           if (published) {
             published.status = 'published'
             broadcast(IPC_CHANNELS.EVENT_NOTE_CREATED, published)
+            cloudSyncService.schedulePush(published.id, 'create')
           }
         })
 
@@ -100,6 +98,7 @@ export function registerNotesIpc(aiService: AIService, taskManager: TaskManager)
     safeHandler('note:update', async (_event, request: NoteUpdateRequest) => {
       const note = modifyNote(request)
       broadcast(IPC_CHANNELS.EVENT_NOTE_UPDATED, note)
+      cloudSyncService.schedulePush(note.id, 'update')
       return note
     })
   )
@@ -109,6 +108,7 @@ export function registerNotesIpc(aiService: AIService, taskManager: TaskManager)
     safeHandler('note:delete', async (_event, id: string) => {
       removeNote(id)
       broadcast(IPC_CHANNELS.EVENT_NOTE_DELETED, id)
+      cloudSyncService.schedulePush(id, 'delete')
     })
   )
 

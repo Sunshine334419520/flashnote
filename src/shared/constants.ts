@@ -22,6 +22,46 @@ export const DEFAULT_CATEGORIES = [
 
 export const DEFAULT_HOTKEY = 'Alt+Space'
 
+// ============================================================
+// Cloud sync — Notion OAuth
+// ============================================================
+
+/** Notion Public Integration OAuth client ID. Public — injected at build time. */
+export const NOTION_CLIENT_ID: string =
+  typeof process !== 'undefined' && process.env != null
+    ? process.env.FLASHNOTE_NOTION_CLIENT_ID ?? ''
+    : ''
+
+/**
+ * Notion Public Integration OAuth client secret.
+ * NEVER committed — set via FLASHNOTE_NOTION_CLIENT_SECRET env var.
+ * In CI/bundled builds, injected at build time via GitHub Secrets.
+ * Each dev creates their own Notion integration for local testing.
+ */
+/**
+ * Main process: replaced by electron-vite define at build time.
+ * Renderer: process.env may not exist — guarded.
+ */
+export const NOTION_CLIENT_SECRET: string =
+  typeof process !== 'undefined' && process.env != null
+    ? process.env.FLASHNOTE_NOTION_CLIENT_SECRET ?? ''
+    : ''
+
+/** Local HTTP server port for OAuth redirect callback. */
+export const NOTION_REDIRECT_PORT = 18923
+
+/** Notion OAuth authorize URL. */
+export const NOTION_AUTH_URL = 'https://api.notion.com/v1/oauth/authorize'
+
+/** Notion OAuth token exchange URL. */
+export const NOTION_TOKEN_URL = 'https://api.notion.com/v1/oauth/token'
+
+/** Notion API base URL. */
+export const NOTION_API_BASE = 'https://api.notion.com/v1'
+
+/** Notion API version header value. */
+export const NOTION_API_VERSION = '2022-06-28'
+
 export const MAX_CONTENT_LENGTH_FOR_AI = 8000
 
 export const MAX_TAGS_PER_NOTE = 10

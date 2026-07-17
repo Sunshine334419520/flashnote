@@ -34,6 +34,7 @@ function getStorageRoot(): string {
 // ============================================================
 
 export function createNote(request: NoteCreateRequest, classification?: {
+  id?: string
   type?: string
   category: string
   tags: string[]
@@ -41,12 +42,14 @@ export function createNote(request: NoteCreateRequest, classification?: {
   sensitive?: boolean
   typedData?: Record<string, unknown>
   status?: 'draft' | 'published'
+  syncRev?: number
+  baseRev?: number
 }): Note {
   const root = getStorageRoot()
   const now = new Date().toISOString()
 
   const note: Note = {
-    id: uuidv4(),
+    id: classification?.id ?? uuidv4(),
     type: (classification?.type as Note['type']) ?? 'text',
     title: classification?.title ?? 'Untitled Note',
     content: request.content,
@@ -60,7 +63,9 @@ export function createNote(request: NoteCreateRequest, classification?: {
     updatedAt: now,
     isClassified: !!classification,
     isManuallyEdited: false,
-    status: classification?.status ?? 'draft'
+    status: classification?.status ?? 'draft',
+    syncRev: classification?.syncRev ?? 0,
+    baseRev: classification?.baseRev ?? 0
   }
 
   // Write to disk
@@ -108,7 +113,9 @@ export function modifyNote(request: NoteUpdateRequest): Note {
     tags: request.tags ?? existing.tags,
     status: request.status ?? existing.status,
     updatedAt: now,
-    isManuallyEdited: true
+    isManuallyEdited: request.isManuallyEdited ?? true,
+    syncRev: request.syncRev ?? (existing.syncRev ?? 0) + 1,
+    baseRev: request.baseRev ?? existing.baseRev ?? 0
   }
 
   // Write to disk

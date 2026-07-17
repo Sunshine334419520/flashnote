@@ -9,6 +9,7 @@ import { initStorageService } from './services/storage.service'
 import { AIService } from './services/ai'
 import { AICommandService } from './services/ai/command.service'
 import { TaskManager } from './services/task-manager'
+import { CloudSyncService } from './services/cloud/cloud-sync.service'
 import { initLogger, logger } from './utils/logger'
 import { closeDatabase } from './database/connection'
 import { createAppMenu, createTrayMenu } from './menu'
@@ -27,7 +28,7 @@ const LIGHT_BG = '#fafaf9'
 /** Read saved theme and return matching window background color. */
 function getThemeBackgroundColor(): string {
   try {
-    const configPath = join(homedir(), 'FlashNote', 'config.json')
+    const configPath = join(homedir(), '.flashnote', 'config.json')
     const raw = readFileSync(configPath, 'utf-8')
     const config = JSON.parse(raw) as { theme?: string }
     const t = config.theme ?? 'system'
@@ -81,6 +82,16 @@ function createMainWindow(): void {
 
   if (isDev) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL!)
+    // DevTools shortcuts are bound to the application menu, which we
+    // remove on Windows/Linux. Handle them manually in dev mode.
+    mainWindow.webContents.on('before-input-event', (_event, input) => {
+      if (
+        (input.key === 'F12' && !input.control && !input.shift && !input.alt && !input.meta) ||
+        (input.key === 'I' && input.control && input.shift && !input.alt && !input.meta)
+      ) {
+        mainWindow?.webContents.toggleDevTools()
+      }
+    })
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -275,7 +286,7 @@ function createTray(): void {
 // Service initialization
 // ============================================================
 
-function initServices(): { storagePath: string; aiService: AIService; aiCommandService: AICommandService; taskManager: TaskManager } {
+function initServices(): { storagePath: string; aiService: AIService; aiCommandService: AICommandService; taskManager: TaskManager; cloudSyncService: CloudSyncService } {
   const storagePath = getDefaultStoragePath()
 
   // Ensure ~/FlashNote/ exists with all subdirectories
@@ -307,9 +318,12 @@ function initServices(): { storagePath: string; aiService: AIService; aiCommandS
   // Initialize task manager (in-memory only)
   const taskManager = new TaskManager()
 
+  // Initialize cloud sync service
+  const cloudSyncService = new CloudSyncService()
+
   logger.info('main:init', 'Services initialized', { storagePath })
 
-  return { storagePath, aiService, aiCommandService, taskManager }
+  return { storagePath, aiService, aiCommandService, taskManager, cloudSyncService }
 }
 
 // Set app name BEFORE ready — affects Dock tooltip and menu bar name
@@ -320,7 +334,7 @@ app.setName(app.getLocale().startsWith('zh') ? '闪记' : 'FlashNote')
 // ============================================================
 
 app.whenReady().then(() => {
-  const { storagePath, aiService, aiCommandService, taskManager } = initServices()
+  const { storagePath, aiService, aiCommandService, taskManager, cloudSyncService } = initServices()
   _aiService = aiService
 
   // Read hotkey from config (falls back to DEFAULT_HOTKEY on first run)
@@ -334,6 +348,7 @@ app.whenReady().then(() => {
     aiService,
     aiCommandService,
     taskManager,
+    cloudSyncService,
     showQuickCaptureWindow,
     hideQuickCaptureWindow,
     showSettingsWindow,
@@ -345,6 +360,10 @@ app.whenReady().then(() => {
 
   createMainWindow()
   createQuickCaptureWindow()
+
+  // Start cloud sync polling if a connection exists (after window creation
+  // so the renderer can receive progress events during the initial sync).
+  cloudSyncService.startPolling()
   createAppMenu(() => showSettingsWindow())
 
   // Dock icon (macOS)

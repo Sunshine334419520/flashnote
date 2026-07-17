@@ -15,12 +15,15 @@ import type {
   AICommandRequest,
   AICommandResult,
   AICommandConfirmRequest,
-  AICommandConfirmResult
+  AICommandConfirmResult,
+  CloudServiceType,
+  CloudConnection,
+  SyncResult
 } from '../shared/types'
 
 // Apply theme BEFORE page renders — reads config.json synchronously (no flash)
 try {
-  const configPath = join(homedir(), 'FlashNote', 'config.json')
+  const configPath = join(homedir(), '.flashnote', 'config.json')
   const raw = readFileSync(configPath, 'utf-8')
   const config = JSON.parse(raw) as { theme?: string }
   const t = config.theme ?? 'system'
@@ -109,6 +112,19 @@ const electronAPI = {
     list: (): Promise<TaskInfo[]> => ipcRenderer.invoke(IPC_CHANNELS.TASK_LIST)
   },
 
+  cloud: {
+    connect: (service: CloudServiceType): Promise<{ connection: CloudConnection; authUrl: string | null }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CLOUD_CONNECT, service),
+    disconnect: (): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CLOUD_DISCONNECT),
+    getStatus: (): Promise<CloudConnection | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CLOUD_GET_STATUS),
+    sync: (): Promise<SyncResult> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CLOUD_SYNC),
+    pull: (): Promise<{ imported: number }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CLOUD_PULL)
+  },
+
   window: {
     showQuickCapture: (): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.WINDOW_SHOW_QUICK_CAPTURE),
@@ -136,7 +152,9 @@ const electronAPI = {
       IPC_CHANNELS.EVENT_SETTINGS_CHANGED,
       IPC_CHANNELS.EVENT_TASK_CREATED,
       IPC_CHANNELS.EVENT_TASK_COMPLETED,
-      IPC_CHANNELS.EVENT_TASK_FAILED
+      IPC_CHANNELS.EVENT_TASK_FAILED,
+      IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED,
+      IPC_CHANNELS.EVENT_CLOUD_SYNC_PROGRESS
     ]
 
     if (!validEvents.includes(channel)) {

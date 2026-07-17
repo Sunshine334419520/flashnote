@@ -20,6 +20,9 @@ jobs:
       - run: pnpm install
       - run: pnpm rebuild
       - run: pnpm build
+        env:
+          FLASHNOTE_NOTION_CLIENT_ID: ${{ vars.FLASHNOTE_NOTION_CLIENT_ID }}
+          FLASHNOTE_NOTION_CLIENT_SECRET: ${{ secrets.FLASHNOTE_NOTION_CLIENT_SECRET }}
       - run: pnpm package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -36,6 +39,9 @@ jobs:
       - run: pnpm install
       - run: pnpm rebuild
       - run: pnpm build
+        env:
+          FLASHNOTE_NOTION_CLIENT_ID: ${{ vars.FLASHNOTE_NOTION_CLIENT_ID }}
+          FLASHNOTE_NOTION_CLIENT_SECRET: ${{ secrets.FLASHNOTE_NOTION_CLIENT_SECRET }}
       - run: pnpm package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -52,6 +58,9 @@ jobs:
       - run: pnpm install
       - run: pnpm rebuild
       - run: pnpm build
+        env:
+          FLASHNOTE_NOTION_CLIENT_ID: ${{ vars.FLASHNOTE_NOTION_CLIENT_ID }}
+          FLASHNOTE_NOTION_CLIENT_SECRET: ${{ secrets.FLASHNOTE_NOTION_CLIENT_SECRET }}
       - run: pnpm package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

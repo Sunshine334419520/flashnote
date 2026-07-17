@@ -4,11 +4,11 @@ import { mkdirSync, existsSync } from 'fs'
 
 /**
  * Resolve and create the FlashNote storage directory.
- * Default: ~/FlashNote
+ * Default: ~/.flashnote
  * Can be overridden via FLASHNOTE_HOME env var or user config.
  */
 export function getDefaultStoragePath(): string {
-  return join(process.env.FLASHNOTE_HOME ?? homedir(), 'FlashNote')
+  return join(process.env.FLASHNOTE_HOME ?? homedir(), '.flashnote')
 }
 
 export function getNotesPath(storagePath: string): string {

@@ -7,8 +7,10 @@ let db: Database.Database | null = null
  * Enables WAL mode for concurrent read performance.
  * Runs migrations on first open.
  */
-export function getDatabase(dbPath: string): Database.Database {
+export function getDatabase(dbPath?: string): Database.Database {
   if (db) return db
+
+  if (!dbPath) throw new Error('Database not initialized. Call getDatabase(dbPath) first.')
 
   db = new Database(dbPath)
 
@@ -65,6 +67,15 @@ function runMigrations(database: Database.Database): void {
   }
   if (version < 5) {
     applyMigration005(database)
+  }
+  if (version < 6) {
+    applyMigration006(database)
+  }
+  if (version < 7) {
+    applyMigration007(database)
+  }
+  if (version < 8) {
+    applyMigration008(database)
   }
 }
 
@@ -251,4 +262,49 @@ function applyMigration005(database: Database.Database): void {
   `)
 
   database.prepare('INSERT INTO _schema_version (version) VALUES (5)').run()
+}
+
+function applyMigration006(database: Database.Database): void {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS cloud_connections (
+      id            TEXT PRIMARY KEY,
+      service       TEXT NOT NULL,
+      access_token  TEXT NOT NULL,
+      workspace_id  TEXT,
+      workspace_name TEXT,
+      account_name  TEXT,
+      account_email TEXT,
+      database_id   TEXT,
+      database_url  TEXT,
+      last_sync_at  TEXT,
+      status        TEXT NOT NULL DEFAULT 'disconnected',
+      error         TEXT,
+      created_at    TEXT NOT NULL,
+      updated_at    TEXT NOT NULL
+    )
+  `)
+
+  database.prepare('INSERT INTO _schema_version (version) VALUES (6)').run()
+}
+
+function applyMigration007(database: Database.Database): void {
+  // Add sync_rev column for cloud sync version tracking
+  try {
+    database.exec(`ALTER TABLE notes ADD COLUMN sync_rev INTEGER NOT NULL DEFAULT 0`)
+  } catch {
+    // Column already exists — ignore
+  }
+
+  database.prepare('INSERT INTO _schema_version (version) VALUES (7)').run()
+}
+
+function applyMigration008(database: Database.Database): void {
+  // Add base_rev column for conflict detection in cloud sync
+  try {
+    database.exec(`ALTER TABLE notes ADD COLUMN base_rev INTEGER NOT NULL DEFAULT 0`)
+  } catch {
+    // Column already exists — ignore
+  }
+
+  database.prepare('INSERT INTO _schema_version (version) VALUES (8)').run()
 }

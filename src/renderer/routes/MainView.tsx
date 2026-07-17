@@ -1,6 +1,7 @@
 import { type ReactElement, useEffect, useState, useCallback, useRef } from 'react'
 import { useNoteStore } from '../stores/noteStore'
 import { useStatusBarStore } from '../stores/statusBarStore'
+import { useCloudSyncStore } from '../stores/cloudSyncStore'
 import { CommandInput } from '../components/command/CommandInput'
 import type { AICommand } from '../components/command/CommandInput'
 import { CommandResultPanel } from '../components/command/CommandResultPanel'
@@ -9,9 +10,10 @@ import { StatusBar } from '../components/statusbar/StatusBar'
 import { StatusBarItem } from '../components/statusbar/StatusBarItem'
 import { StatusBarPanel } from '../components/statusbar/StatusBarPanel'
 import { AIOperationPanel } from '../components/statusbar/panels/AIOperationPanel'
-import { Settings, AlertCircle, RotateCw, Sparkles } from 'lucide-react'
+import { CloudSyncPanel } from '../components/statusbar/panels/CloudSyncPanel'
+import { Settings, AlertCircle, RotateCw, Sparkles, Cloud, CloudAlert, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { useT } from '../i18n'
-import type { Note, AICommandRequest, AICommandResult } from '../../shared/types'
+import type { Note, AICommandRequest, AICommandResult, CloudConnection, SyncProgress } from '../../shared/types'
 
 /** delete/edit results await a second-phase confirmation. */
 type PendingResult = Extract<AICommandResult, { kind: 'delete_candidates' } | { kind: 'edit_preview' }>
@@ -27,6 +29,25 @@ export function MainView(): ReactElement {
 
   // Status bar
   const failedCount = useStatusBarStore((s) => s.getFailedCount())
+  const cloudConnection = useCloudSyncStore((s) => s.connection)
+  const cloudSyncProgress = useCloudSyncStore((s) => s.syncProgress)
+
+  // Cloud icon based on status
+  const cloudIcon = (() => {
+    if (!cloudConnection || cloudConnection.status === 'disconnected') {
+      return <Cloud size={14} className="text-muted-foreground/30" />
+    }
+    if (cloudConnection.status === 'connecting' || (cloudSyncProgress && cloudSyncProgress.phase !== 'idle')) {
+      return <RefreshCw size={14} className="text-blue-500 animate-spin" />
+    }
+    if (cloudConnection.status === 'error') {
+      return <CloudAlert size={14} className="text-type-credential" />
+    }
+    return <CheckCircle2 size={14} className="text-green-500" />
+  })()
+
+  const cloudDot = cloudConnection?.status === 'error'
+  const cloudDotColor = 'bg-type-credential'
 
   // Command lifecycle state
   const [processingCmd, setProcessingCmd] = useState<AICommand | null>(null)
@@ -49,7 +70,22 @@ export function MainView(): ReactElement {
     })
     const c2 = window.electronAPI.on('event:note-updated', () => fetchNotes())
     const c3 = window.electronAPI.on('event:note-deleted', () => fetchNotes())
-    return () => { c1(); c2(); c3() }
+
+    // Cloud sync events
+    const c4 = window.electronAPI.on('event:cloud-status-changed', (data: unknown) => {
+      const conn = data as CloudConnection | null
+      useCloudSyncStore.getState().setConnection(conn)
+      // Refresh notes when sync pulls in new data
+      if (conn?.status === 'connected') fetchNotes()
+    })
+    const c5 = window.electronAPI.on('event:cloud-sync-progress', (data: unknown) => {
+      useCloudSyncStore.getState().setSyncProgress(data as SyncProgress | null)
+    })
+
+    // Initial cloud status fetch
+    useCloudSyncStore.getState().fetchStatus()
+
+    return () => { c1(); c2(); c3(); c4(); c5() }
   }, [fetchNotes])
 
   const toErrorMessage = useCallback((err: unknown): string => {
@@ -262,6 +298,17 @@ export function MainView(): ReactElement {
 
       {/* Status bar */}
       <StatusBar>
+        <StatusBarItem
+          id="cloud"
+          icon={cloudIcon}
+          label={t('statusbar.cloud')}
+          dot={cloudDot}
+          badgeColor={cloudDotColor}
+        >
+          <StatusBarPanel title={t('statusbar.cloud')}>
+            <CloudSyncPanel />
+          </StatusBarPanel>
+        </StatusBarItem>
         <StatusBarItem
           id="ai"
           icon={<Sparkles size={14} />}

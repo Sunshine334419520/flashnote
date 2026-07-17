@@ -21,6 +21,9 @@ export interface Note {
   isClassified: boolean
   isManuallyEdited: boolean
   status: 'draft' | 'published'
+  syncRev: number
+  /** The remote version this note was last synced to. 0 = never synced. */
+  baseRev: number
 }
 
 // ============================================================
@@ -59,6 +62,9 @@ export interface NoteUpdateRequest {
   category?: string
   tags?: string[]
   status?: 'draft' | 'published'
+  syncRev?: number
+  baseRev?: number
+  isManuallyEdited?: boolean
 }
 
 // ============================================================
@@ -169,4 +175,35 @@ export interface AppConfig {
   theme: 'light' | 'dark' | 'system'
   language: 'zh-CN' | 'en' | 'system'
   windowBounds?: { x: number; y: number; width: number; height: number }
+}
+
+// ============================================================
+// Cloud sync types
+// ============================================================
+
+export type CloudServiceType = 'notion' | 'feishu'
+
+export interface CloudConnection {
+  id: string
+  service: CloudServiceType
+  status: 'disconnected' | 'connecting' | 'connected' | 'error'
+  workspaceName?: string
+  accountEmail?: string
+  databaseUrl?: string
+  lastSyncAt?: string
+  error?: string
+  createdAt: string
+}
+
+export interface SyncProgress {
+  phase: 'idle' | 'pushing' | 'pulling' | 'comparing'
+  current: number
+  total: number
+}
+
+export interface SyncResult {
+  pushed: number
+  pulled: number
+  skipped: number
+  errors: string[]
 }
