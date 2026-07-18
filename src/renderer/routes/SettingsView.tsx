@@ -6,6 +6,7 @@ import { LanguageSelector } from '../components/settings/LanguageSelector'
 import { ShortcutSelector } from '../components/settings/ShortcutSelector'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n'
+import { CONFIG_KEYS } from '../../shared/constants'
 
 export function SettingsView(): ReactElement {
   const { theme, setTheme } = useTheme()
@@ -13,7 +14,7 @@ export function SettingsView(): ReactElement {
   const [hotkey, setHotkey] = useState('')
 
   useEffect(() => {
-    window.electronAPI.settings.get('hotkey').then((v) => {
+    window.electronAPI.settings.get(CONFIG_KEYS.HOTKEY).then((v) => {
       if (typeof v === 'string' && v) setHotkey(v)
     })
   }, [])
@@ -39,9 +40,9 @@ export function SettingsView(): ReactElement {
         <div className="border-t border-border" />
         <ShortcutSelector current={hotkey} onChange={handleHotkeyChange} />
         <div className="border-t border-border" />
-        <AIProviderSettings />
-        <div className="border-t border-border" />
         <CloudSyncSettings />
+        <div className="border-t border-border" />
+        <AIProviderSettings />
       </div>
     </div>
   )

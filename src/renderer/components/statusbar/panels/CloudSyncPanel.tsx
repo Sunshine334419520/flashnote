@@ -4,7 +4,7 @@ import { useCloudSyncStore } from '../../../stores/cloudSyncStore'
 import { useFormatTime } from '../../../hooks/useFormatTime'
 import { useT } from '../../../i18n'
 import { cn } from '../../../lib/cn'
-import { SYNC_PHASES } from '../../../../shared/types'
+import { SYNC_PHASES, CLOUD_STATUS } from '../../../../shared/types'
 
 export function CloudSyncPanel(): ReactElement {
   const connection = useCloudSyncStore((s) => s.connection)
@@ -16,7 +16,7 @@ export function CloudSyncPanel(): ReactElement {
   const isSyncing = syncProgress != null && syncProgress.phase !== SYNC_PHASES.IDLE
 
   // ── Disconnected ──────────────────────────────────────────
-  if (!connection || connection.status === 'disconnected') {
+  if (!connection || connection.status === CLOUD_STATUS.DISCONNECTED) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[140px] text-center px-4 py-6 gap-3">
         <Cloud size={28} className="text-muted-foreground/30" />
@@ -36,7 +36,7 @@ export function CloudSyncPanel(): ReactElement {
   }
 
   // ── Connecting ────────────────────────────────────────────
-  if (connection.status === 'connecting') {
+  if (connection.status === CLOUD_STATUS.CONNECTING) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[140px] text-center px-4 py-6 gap-3">
         <Loader2 size={28} className="animate-spin text-primary" />
@@ -48,7 +48,7 @@ export function CloudSyncPanel(): ReactElement {
   }
 
   // ── Error ─────────────────────────────────────────────────
-  if (connection.status === 'error') {
+  if (connection.status === CLOUD_STATUS.ERROR) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[140px] text-center px-4 py-6 gap-3">
         <CloudAlert size={28} className="text-type-credential" />

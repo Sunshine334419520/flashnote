@@ -5,7 +5,8 @@ import { CloudSyncSettings } from '../components/settings/CloudSyncSettings'
 import { useT } from '../i18n'
 import { cn } from '../lib/cn'
 import type { AIProviderConfig, AIProviderType } from '../../shared/types'
-import { BUILTIN_PROVIDER_PRESETS } from '../../shared/constants'
+import { CLOUD_STATUS } from '../../shared/types'
+import { BUILTIN_PROVIDER_PRESETS, CONFIG_KEYS } from '../../shared/constants'
 
 // ================================================================
 // Provider data
@@ -63,7 +64,7 @@ export function OnboardingView({ onComplete }: Props): ReactElement {
   const connection = useCloudSyncStore((s) => s.connection)
 
   useEffect(() => {
-    window.electronAPI.settings.get('hotkey').then((v) => {
+    window.electronAPI.settings.get(CONFIG_KEYS.HOTKEY).then((v) => {
       if (typeof v === 'string' && v) setHotkey(v)
     })
   }, [])
@@ -76,8 +77,8 @@ export function OnboardingView({ onComplete }: Props): ReactElement {
   const handleFinish = useCallback(async () => {
     setSaving(true)
     try {
-      await window.electronAPI.settings.set('hotkey', hotkey)
-      await window.electronAPI.settings.set('onboardingCompleted', true)
+      await window.electronAPI.settings.set(CONFIG_KEYS.HOTKEY, hotkey)
+      await window.electronAPI.settings.set(CONFIG_KEYS.ONBOARDING_COMPLETED, true)
       onComplete()
     } catch { setSaving(false) }
   }, [hotkey, onComplete])
@@ -276,14 +277,14 @@ function CloudConfigStep({ onDone, connection }: {
   const { t } = useT()
 
   useEffect(() => {
-    if (connection?.status === 'connected') {
+    if (connection?.status === CLOUD_STATUS.CONNECTED) {
       const timer = setTimeout(onDone, 1500)
       return () => clearTimeout(timer)
     }
   }, [connection?.status, onDone])
 
-  const isConnecting = connection?.status === 'connecting'
-  const isInitializing = connection?.status === 'initializing'
+  const isConnecting = connection?.status === CLOUD_STATUS.CONNECTING
+  const isInitializing = connection?.status === CLOUD_STATUS.INITIALIZING
   const isConnected = connection?.status === 'connected'
 
   return (
@@ -446,7 +447,7 @@ interface DoneStepProps {
 function DoneStep({ connection, hotkey, saving, onFinish }: DoneStepProps): ReactElement {
   const { t } = useT()
   const [providers, setProviders] = useState<AIProviderConfig[]>([])
-  const isCloudConnected = connection?.status === 'connected'
+  const isCloudConnected = connection?.status === CLOUD_STATUS.CONNECTED
 
   useEffect(() => {
     window.electronAPI.ai.providers.list().then(setProviders).catch(() => setProviders([]))

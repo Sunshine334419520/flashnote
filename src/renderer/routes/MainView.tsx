@@ -2,7 +2,8 @@ import { type ReactElement, useEffect, useState, useCallback, useRef } from 'rea
 import { useNoteStore } from '../stores/noteStore'
 import { useStatusBarStore } from '../stores/statusBarStore'
 import { useCloudSyncStore } from '../stores/cloudSyncStore'
-import { SYNC_PHASES } from '../../shared/types'
+import { SYNC_PHASES, CLOUD_STATUS } from '../../shared/types'
+import { CONFIG_KEYS } from '../../shared/constants'
 import { OnboardingView } from './OnboardingView'
 import { CommandInput } from '../components/command/CommandInput'
 import type { AICommand } from '../components/command/CommandInput'
@@ -34,7 +35,7 @@ export function MainView(): ReactElement {
   const [onboardingChecked, setOnboardingChecked] = useState(false)
 
   useEffect(() => {
-    window.electronAPI.settings.get('onboardingCompleted').then((completed) => {
+    window.electronAPI.settings.get(CONFIG_KEYS.ONBOARDING_COMPLETED).then((completed) => {
       if (!completed) setShowOnboarding(true)
       setOnboardingChecked(true)
     }).catch(() => setOnboardingChecked(true))
@@ -47,19 +48,19 @@ export function MainView(): ReactElement {
 
   // Cloud icon based on status
   const cloudIcon = (() => {
-    if (!cloudConnection || cloudConnection.status === 'disconnected') {
+    if (!cloudConnection || cloudConnection.status === CLOUD_STATUS.DISCONNECTED) {
       return <Cloud size={14} className="text-muted-foreground/30" />
     }
-    if (cloudConnection.status === 'connecting' || (cloudSyncProgress && cloudSyncProgress.phase !== SYNC_PHASES.IDLE)) {
+    if (cloudConnection.status === CLOUD_STATUS.CONNECTING || (cloudSyncProgress && cloudSyncProgress.phase !== SYNC_PHASES.IDLE)) {
       return <RefreshCw size={14} className="text-blue-500 animate-spin" />
     }
-    if (cloudConnection.status === 'error') {
+    if (cloudConnection.status === CLOUD_STATUS.ERROR) {
       return <CloudAlert size={14} className="text-type-credential" />
     }
     return <CheckCircle2 size={14} className="text-green-500" />
   })()
 
-  const cloudDot = cloudConnection?.status === 'error'
+  const cloudDot = cloudConnection?.status === CLOUD_STATUS.ERROR
   const cloudDotColor = 'bg-type-credential'
 
   // Command lifecycle state
@@ -89,7 +90,7 @@ export function MainView(): ReactElement {
       const conn = data as CloudConnection | null
       useCloudSyncStore.getState().setConnection(conn)
       // Refresh notes when sync pulls in new data
-      if (conn?.status === 'connected') fetchNotes()
+      if (conn?.status === CLOUD_STATUS.CONNECTED) fetchNotes()
     })
     const c5 = window.electronAPI.on('event:cloud-sync-progress', (data: unknown) => {
       useCloudSyncStore.getState().setSyncProgress(data as SyncProgress | null)

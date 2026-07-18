@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import zhCN from './zh-CN'
 import en from './en'
 import type { Translations } from './zh-CN'
+import { CONFIG_KEYS } from '../../shared/constants'
 
 export type Language = 'zh-CN' | 'en' | 'system'
 
@@ -58,7 +59,7 @@ export function I18nProvider({ children }: Props): ReactNode {
     }
 
     // 2. Async read from config (authoritative)
-    window.electronAPI.settings.get('language').then((saved) => {
+    window.electronAPI.settings.get(CONFIG_KEYS.LANGUAGE).then((saved) => {
       const l = (typeof saved === 'string' && ['zh-CN', 'en', 'system'].includes(saved)
         ? saved
         : 'system') as Language
@@ -69,7 +70,7 @@ export function I18nProvider({ children }: Props): ReactNode {
     // 3. Listen for cross-window changes
     const unsub = window.electronAPI.on('event:settings-changed', (data: unknown) => {
       const d = data as { key: string; value: unknown }
-      if (d.key === 'language') {
+      if (d.key === CONFIG_KEYS.LANGUAGE) {
         const l = (typeof d.value === 'string' && ['zh-CN', 'en', 'system'].includes(d.value)
           ? d.value
           : 'system') as Language
@@ -83,7 +84,7 @@ export function I18nProvider({ children }: Props): ReactNode {
   const setLanguage = useCallback((l: Language) => {
     setLanguageState(l)
     localStorage.setItem('flashnote-language', l)
-    window.electronAPI.settings.set('language', l).catch((err) => console.error('Failed to save language:', err))
+    window.electronAPI.settings.set(CONFIG_KEYS.LANGUAGE, l).catch((err) => console.error('Failed to save language:', err))
   }, [])
 
   const resolved = resolveLanguage(language)

@@ -5,7 +5,7 @@ import { useFormatTime } from '../../hooks/useFormatTime'
 import { useT } from '../../i18n'
 import { cn } from '../../lib/cn'
 import { NotionIcon, OneNoteIcon } from './CloudServiceIcons'
-import { SYNC_PHASES } from '../../../shared/types'
+import { SYNC_PHASES, CLOUD_STATUS } from '../../../shared/types'
 import type { CloudConnection, SyncProgress, CloudServiceType } from '../../../shared/types'
 
 interface ServiceOption {
@@ -58,8 +58,9 @@ export function CloudSyncSettings(): ReactElement {
     return () => { unsubStatus(); unsubProgress() }
   }, [])
 
-  const isConnected = connection?.status === 'connected'
-  const isConnecting = connection?.status === 'connecting'
+  const isConnected = connection?.status === CLOUD_STATUS.CONNECTED
+  const isConnecting = connection?.status === CLOUD_STATUS.CONNECTING
+  const isInitializing = connection?.status === CLOUD_STATUS.INITIALIZING
   const isSyncing = syncProgress != null && syncProgress.phase !== SYNC_PHASES.IDLE
   const connectedService = connection?.service as CloudServiceType | undefined
   const connectedOption = connectedService ? SERVICE_OPTIONS.find(o => o.value === connectedService) : null
@@ -96,7 +97,7 @@ export function CloudSyncSettings(): ReactElement {
       </div>
 
       {/* Connection error banner — OAuth timeout / rejection, not yet connected */}
-      {!isConnected && connection?.status === 'error' && connection.error && (
+      {!isConnected && connection?.status === CLOUD_STATUS.ERROR && connection.error && (
         <div className="flex items-start gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-caption text-red-600 dark:text-red-400">
           <AlertCircle size={14} className="shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
@@ -123,12 +124,12 @@ export function CloudSyncSettings(): ReactElement {
         </div>
       )}
 
-      {/* ── Connecting indicator ──────────────────────────────── */}
-      {isConnecting && !isConnected && (
+      {/* ── Connecting (OAuth in browser) ───────────────────── */}
+      {isConnecting && (
         <div className="flex flex-col items-center justify-center min-h-[180px] gap-3">
           <RefreshCw size={28} className="animate-spin text-primary" />
           <div className="text-center">
-            <p className="text-body font-medium text-foreground">{t('cloud.connecting')}</p>
+            <p className="text-body font-medium text-foreground">等待浏览器授权</p>
             <p className="text-caption text-muted-foreground mt-0.5">
               {SERVICE_OPTIONS.find(o => o.value === selectedService)?.label}
             </p>
@@ -136,8 +137,21 @@ export function CloudSyncSettings(): ReactElement {
         </div>
       )}
 
+      {/* ── Initializing (setting up remote DB + first sync) ── */}
+      {isInitializing && (
+        <div className="flex flex-col items-center justify-center min-h-[180px] gap-3">
+          <RefreshCw size={28} className="animate-spin text-primary" />
+          <div className="text-center">
+            <p className="text-body font-medium text-foreground">正在初始化云同步...</p>
+            <p className="text-caption text-muted-foreground mt-0.5">
+              连接成功，正在同步数据
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Service selector (disconnected) ───────────────────── */}
-      {!isConnected && !isConnecting && (
+      {!isConnected && !isConnecting && !isInitializing && (
         <div className="min-h-[180px] space-y-4">
           <div className="grid grid-cols-2 gap-3">
             {SERVICE_OPTIONS.map(({ value, label, descriptionKey, Icon }) => {
@@ -192,14 +206,14 @@ export function CloudSyncSettings(): ReactElement {
       )}
 
       {/* ── Connected state ──────────────────────────────────── */}
-      {isConnected && connectedOption && (
+      {isConnected && (
         <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
           {/* Service header */}
           <div className="flex items-center gap-3">
-            <connectedOption.Icon size={28} className="text-foreground shrink-0" />
+            {connectedOption && <connectedOption.Icon size={28} className="text-foreground shrink-0" />}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-body font-medium">{connectedOption.label}</span>
+                <span className="text-body font-medium">{connectedOption?.label ?? connection.service}</span>
                 <span className="text-micro font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
                   {t('cloud.connected')}
                 </span>

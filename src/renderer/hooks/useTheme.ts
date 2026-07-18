@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { CONFIG_KEYS } from '../../shared/constants'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -20,7 +21,7 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void } {
 
   // Read saved theme on mount
   useEffect(() => {
-    window.electronAPI.settings.get('theme').then((saved) => {
+    window.electronAPI.settings.get(CONFIG_KEYS.THEME).then((saved) => {
       const t = (typeof saved === 'string' && ['light', 'dark', 'system'].includes(saved)
         ? saved
         : 'system') as Theme
@@ -37,7 +38,7 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void } {
   useEffect(() => {
     const unsub = window.electronAPI.on('event:settings-changed', (data: unknown) => {
       const d = data as { key: string; value: unknown }
-      if (d.key === 'theme') {
+      if (d.key === CONFIG_KEYS.THEME) {
         const t = (typeof d.value === 'string' && ['light', 'dark', 'system'].includes(d.value)
           ? d.value
           : 'system') as Theme
@@ -63,7 +64,7 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void } {
     setThemeState(t)
     applyTheme(t)
     localStorage.setItem('flashnote-theme', t)
-    window.electronAPI.settings.set('theme', t).catch((err) => console.error('Failed to save theme:', err))
+    window.electronAPI.settings.set(CONFIG_KEYS.THEME, t).catch((err) => console.error('Failed to save theme:', err))
   }, [])
 
   return { theme, setTheme }

@@ -31,7 +31,6 @@ export function ProviderForm({
   const [apiKey, setApiKey] = useState(initial?.apiKey ?? '')
   const [baseURL, setBaseURL] = useState(initial?.baseURL ?? '')
   const [model, setModel] = useState(initial?.model ?? '')
-  const [maxTokens, setMaxTokens] = useState(initial?.maxTokens ?? 300)
   const [thinking, setThinking] = useState(initial?.thinking ?? 'disabled')
   const { t } = useT()
 
@@ -42,10 +41,9 @@ export function ProviderForm({
       if (preset) {
         setBaseURL(preset.baseURL)
         setModel(preset.model)
-        setMaxTokens(preset.maxTokens)
-        if (!name) {
-          setName(TYPE_LABELS[type])
-        }
+        setName(TYPE_LABELS[type])
+      } else if (type === 'custom') {
+        setName('')
       }
     }
   }, [type, mode])
@@ -61,7 +59,7 @@ export function ProviderForm({
       apiKey: apiKey.trim(),
       baseURL: baseURL.trim(),
       model: model.trim(),
-      maxTokens,
+      maxTokens: 300,
       thinking: type === 'deepseek' ? thinking : undefined
     })
   }
@@ -139,30 +137,17 @@ export function ProviderForm({
           />
         </label>
 
-        {/* Model + Max Tokens */}
-        <div className="grid grid-cols-3 gap-3">
-          <label className="col-span-2 space-y-1.5">
-            <span className="text-label font-medium text-muted-foreground">{t('provider.form.model')}</span>
-            <input
-              type="text"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder="model-name"
-              className="w-full bg-muted/50 rounded-xl px-3 py-2 text-body outline-none border border-transparent focus:border-primary/30"
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-label font-medium text-muted-foreground">{t('provider.form.maxTokens')}</span>
-            <input
-              type="number"
-              value={maxTokens}
-              onChange={(e) => setMaxTokens(Number(e.target.value))}
-              min={50}
-              max={4096}
-              className="w-full bg-muted/50 rounded-xl px-3 py-2 text-body outline-none border border-transparent focus:border-primary/30"
-            />
-          </label>
-        </div>
+        {/* Model */}
+        <label className="space-y-1.5">
+          <span className="text-label font-medium text-muted-foreground">{t('provider.form.model')}</span>
+          <input
+            type="text"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="model-name"
+            className="w-full bg-muted/50 rounded-xl px-3 py-2 text-body outline-none border border-transparent focus:border-primary/30"
+          />
+        </label>
 
         {/* DeepSeek Thinking Mode */}
         {type === 'deepseek' && (
