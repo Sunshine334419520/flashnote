@@ -149,9 +149,10 @@ const en: Translations = {
 
   // Cloud sync
   'statusbar.cloud': 'Cloud Sync',
-  'cloud.title': 'Cloud Sync',
-  'cloud.subtitle': 'Connect Notion to enable multi-device sync',
-  'cloud.connect': 'Connect Notion',
+  'cloud.title': 'Connect to Cloud',
+  'cloud.subtitle': 'Connect to cloud, enable cross-device sync',
+  'cloud.connect': 'Connect',
+  'cloud.selectService': 'Select cloud service',
   'cloud.connecting': 'Connecting...',
   'cloud.connected': 'Connected',
   'cloud.disconnected': 'Disconnected',
@@ -171,11 +172,33 @@ const en: Translations = {
   'cloud.error.network': 'Network error, check your connection',
   'cloud.feishu': 'Feishu',
   'cloud.feishuComingSoon': 'Feishu Bitable support coming soon',
+  'cloud.onenote': 'OneNote',
+  'cloud.notionHint': 'Connect to your Notion database for sync',
+  'cloud.onenoteHint': 'Connect to your OneNote notebooks via Microsoft Graph',
+  'cloud.connectGeneric': 'Connect',
   'cloud.recentSync': 'Sync completed',
   'cloud.syncFailed': 'Sync failed',
   'cloud.phase.comparing': 'Comparing...',
   'cloud.phase.pushing': 'Pushing...',
   'cloud.phase.pulling': 'Pulling...',
+
+  // Onboarding
+  'onboarding.step1': 'AI Setup',
+  'onboarding.step2': 'Cloud Sync',
+  'onboarding.step3': 'Confirm',
+  'onboarding.skip': 'Skip',
+  'onboarding.next': 'Next',
+  'onboarding.back': 'Back',
+  'onboarding.finish': 'Done, Start Using',
+  'onboarding.summary.ai': 'AI Provider',
+  'onboarding.summary.cloud': 'Cloud Sync',
+  'onboarding.summary.hotkey': 'Shortcut',
+  'onboarding.summary.skipped': 'Skipped',
+  'onboarding.summary.none': 'Not configured',
+  'onboarding.desc.ai': 'Set up AI to unlock smart content parsing',
+  'onboarding.desc.cloud': 'Connect to cloud for seamless cross-device sync',
+  'onboarding.desc.confirm': 'Review your setup and get started',
+  'onboarding.advancing': 'Advancing to next step',
 }
 
 export default en

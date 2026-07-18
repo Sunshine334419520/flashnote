@@ -44,6 +44,12 @@ pnpm rebuild          # electron-rebuild better-sqlite3
 
 ## Coding Conventions
 
+### Log tags
+Use `LOG_TAGS.X.Y` constants from `src/shared/logTags.ts` — never inline strings like `'cloud:service'`. Never `console.*` — always `logger.*`.
+
+### String / enum constants
+IPC channels → `IPC_CHANNELS.X`, config keys → `CONFIG_KEYS.X`. Shared enum values (states, types, phases) must be defined as `as const` objects (`CLOUD_STATUS`, `SYNC_PHASES`). Any string literal repeated 3+ times across files must be extracted to a constant.
+
 ### Component Style
 
 ```ts
@@ -62,6 +68,7 @@ export function ComponentName({ note, onUpdate }: Props): ReactElement {
 - Named function declarations with explicit `ReactElement` return type. Never `React.FC`.
 - Props: `interface Props` or `interface ComponentNameProps`, defined in the same file above the component.
 - Never `export default`. Always inline named exports.
+- Reuse over rewrite — compose from existing components instead of creating standalone alternatives.
 
 ### File Naming
 

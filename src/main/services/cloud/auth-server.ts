@@ -1,5 +1,6 @@
 import http from 'http'
 import { logger } from '../../utils/logger'
+import { LOG_TAGS } from '../../../shared/logTags'
 import { NOTION_REDIRECT_PORT } from '../../../shared/constants'
 
 /**
@@ -26,19 +27,19 @@ export class OAuthServer {
           reject(new Error(`Port ${preferredPort} is already in use. Close other instances of FlashNote and try again.`))
           return
         }
-        logger.error('cloud:auth-server', 'Server error', { error: err.message })
+        logger.error(LOG_TAGS.CLOUD.AUTH_SERVER, 'Server error', { error: err.message })
         reject(err)
       }
 
       self.server.on('error', onError)
-      self.server.listen(preferredPort, '127.0.0.1', () => {
+      self.server.listen(preferredPort, () => {
         setPort(self.server!.address())
       })
 
       function setPort(addr: ReturnType<http.Server['address']>): void {
         if (addr && typeof addr === 'object') {
           self.port = addr.port
-          logger.info('cloud:auth-server', `Listening on port ${self.port}`)
+          logger.info(LOG_TAGS.CLOUD.AUTH_SERVER, `Listening on port ${self.port}`)
           resolve({ port: self.port })
         } else {
           reject(new Error('Failed to get server address'))
@@ -50,8 +51,14 @@ export class OAuthServer {
   /** Wait for the OAuth callback. Times out after `timeoutMs` (default 5 min). */
   waitForCallback(timeoutMs = 300_000): Promise<{ code: string; state: string }> {
     return new Promise((resolve, reject) => {
-      this.resolveCallback = resolve
-      this.rejectCallback = reject
+      this.resolveCallback = (result) => {
+        logger.info(LOG_TAGS.CLOUD.AUTH_SERVER, '[waitForCallback] resolved', { code: result.code.substring(0, 8) + '...' })
+        resolve(result)
+      }
+      this.rejectCallback = (err) => {
+        logger.info(LOG_TAGS.CLOUD.AUTH_SERVER, '[waitForCallback] rejected', { error: String(err) })
+        reject(err)
+      }
 
       this.timeout = setTimeout(() => {
         this.cleanup()
@@ -66,7 +73,7 @@ export class OAuthServer {
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => {
-          logger.info('cloud:auth-server', 'Server stopped')
+          logger.info(LOG_TAGS.CLOUD.AUTH_SERVER, 'Server stopped')
           resolve()
         })
       } else {
@@ -78,9 +85,15 @@ export class OAuthServer {
   // ── private ──────────────────────────────────────────────
 
   private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+    try {
+      logger.info(LOG_TAGS.CLOUD.AUTH_SERVER, `[request] ${req.method} ${req.url}`)
+    } catch { /* logger error, ignore */ }
+
+    try {
     const url = new URL(req.url ?? '/', `http://localhost:${this.port}`)
 
     if (url.pathname === '/callback') {
+      try { logger.info(LOG_TAGS.CLOUD.AUTH_SERVER, '[callback] received') } catch { /* */ }
       const code = url.searchParams.get('code')
       const state = url.searchParams.get('state')
       const error = url.searchParams.get('error')
@@ -108,6 +121,11 @@ export class OAuthServer {
       res.writeHead(404)
       res.end('Not found')
     }
+    } catch (err) {
+      try { logger.error(LOG_TAGS.CLOUD.AUTH_SERVER, 'handleRequest crashed', { error: String(err) }) } catch { /* */ }
+      res.writeHead(500)
+      res.end('Internal error')
+    }
   }
 
   private sendHTML(res: http.ServerResponse, success: boolean, message: string): void {
@@ -126,6 +144,7 @@ export class OAuthServer {
   </div>
 </body>
 </html>`
+    res.setHeader('Connection', 'close')
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
     res.end(html)
   }

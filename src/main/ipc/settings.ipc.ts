@@ -3,6 +3,7 @@ import { IPC_CHANNELS } from '../../shared/ipc-channels'
 import { getConfig, setConfig, getAllConfig } from '../services/config.service'
 import { safeHandler } from '../utils/safeHandler'
 import { broadcast } from '../utils/broadcast'
+import { CONFIG_KEYS } from '../../shared/constants'
 
 export interface SettingsCallbacks {
   onHotkeyChange: (hotkey: string) => boolean
@@ -11,7 +12,7 @@ export interface SettingsCallbacks {
 export function registerSettingsIpc(callbacks: SettingsCallbacks): void {
   ipcMain.handle(
     IPC_CHANNELS.SETTINGS_GET,
-    safeHandler('settings:get', async (_event, key: string) => {
+    safeHandler(IPC_CHANNELS.SETTINGS_GET, async (_event, key: string) => {
       try {
         return (getAllConfig() as Record<string, unknown>)[key] ?? null
       } catch {
@@ -22,7 +23,7 @@ export function registerSettingsIpc(callbacks: SettingsCallbacks): void {
 
   ipcMain.handle(
     IPC_CHANNELS.SETTINGS_SET,
-    safeHandler('settings:set', async (_event, args: { key: string; value: unknown }) => {
+    safeHandler(IPC_CHANNELS.SETTINGS_SET, async (_event, args: { key: string; value: unknown }) => {
       setConfig(args.key as never, args.value as never)
       broadcast(IPC_CHANNELS.EVENT_SETTINGS_CHANGED, { key: args.key, value: args.value })
       return true
@@ -31,18 +32,18 @@ export function registerSettingsIpc(callbacks: SettingsCallbacks): void {
 
   ipcMain.handle(
     IPC_CHANNELS.SETTINGS_SET_HOTKEY,
-    safeHandler('settings:set-hotkey', async (_event, hotkey: string) => {
+    safeHandler(IPC_CHANNELS.SETTINGS_SET_HOTKEY, async (_event, hotkey: string) => {
       const ok = callbacks.onHotkeyChange(hotkey)
       if (!ok) return false
-      setConfig('hotkey', hotkey)
-      broadcast(IPC_CHANNELS.EVENT_SETTINGS_CHANGED, { key: 'hotkey', value: hotkey })
+      setConfig(CONFIG_KEYS.HOTKEY as never, hotkey as never)
+      broadcast(IPC_CHANNELS.EVENT_SETTINGS_CHANGED, { key: CONFIG_KEYS.HOTKEY, value: hotkey })
       return true
     })
   )
 
   ipcMain.handle(
     IPC_CHANNELS.SETTINGS_GET_ALL,
-    safeHandler('settings:getAll', async () => {
+    safeHandler(IPC_CHANNELS.SETTINGS_GET_ALL, async () => {
       return getAllConfig()
     })
   )

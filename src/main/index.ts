@@ -10,10 +10,11 @@ import { AIService } from './services/ai'
 import { AICommandService } from './services/ai/command.service'
 import { TaskManager } from './services/task-manager'
 import { CloudSyncService } from './services/cloud/cloud-sync.service'
-import { initLogger, logger } from './utils/logger'
+import { initLogger, logger, logStartup } from './utils/logger'
 import { closeDatabase } from './database/connection'
 import { createAppMenu, createTrayMenu } from './menu'
-import { IS_MAC, DEFAULT_HOTKEY } from '../shared/constants'
+import { IS_MAC, DEFAULT_HOTKEY, CONFIG_KEYS } from '../shared/constants'
+import { LOG_TAGS } from '../shared/logTags'
 
 let mainWindow: BrowserWindow | null = null
 let quickCaptureWindow: BrowserWindow | null = null
@@ -37,10 +38,10 @@ function getThemeBackgroundColor(): string {
     if (t === 'dark') bg = DARK_BG
     else if (t === 'light') bg = LIGHT_BG
     else bg = sysDark ? DARK_BG : LIGHT_BG
-    logger.info('main:theme', `theme=${t} systemDark=${sysDark} → bg=${bg}`)
+    logger.info(LOG_TAGS.MAIN.THEME, `theme=${t} systemDark=${sysDark} → bg=${bg}`)
     return bg
   } catch (err) {
-    logger.warn('main:theme', 'Could not read config', { err: String(err) })
+    logger.warn(LOG_TAGS.MAIN.THEME, 'Could not read config', { err: String(err) })
     return nativeTheme.shouldUseDarkColors ? DARK_BG : LIGHT_BG
   }
 }
@@ -217,10 +218,10 @@ function registerGlobalShortcut(hotkey: string): boolean {
   })
 
   if (!registered) {
-    console.warn(`Failed to register global shortcut: ${hotkey}`)
+    logger.warn(LOG_TAGS.MAIN.HOTKEY, `Failed to register global shortcut: ${hotkey}`)
     return false
   }
-  logger.info('main:hotkey', `Registered: ${hotkey}`)
+  logger.info(LOG_TAGS.MAIN.HOTKEY, `Registered: ${hotkey}`)
   return true
 }
 
@@ -233,7 +234,7 @@ function updateGlobalShortcut(newHotkey: string): boolean {
   } else {
     // Rollback: re-register the old one
     registerGlobalShortcut(currentHotkey)
-    logger.warn('main:hotkey', `Failed to register ${newHotkey}, kept ${currentHotkey}`)
+    logger.warn(LOG_TAGS.MAIN.HOTKEY, `Failed to register ${newHotkey}, kept ${currentHotkey}`)
   }
   return ok
 }
@@ -286,6 +287,11 @@ function createTray(): void {
 // Service initialization
 // ============================================================
 
+const APP_VERSION: string = (() => {
+  try { return JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf-8')).version }
+  catch { return '0.0.0' }
+})()
+
 function initServices(): { storagePath: string; aiService: AIService; aiCommandService: AICommandService; taskManager: TaskManager; cloudSyncService: CloudSyncService } {
   const storagePath = getDefaultStoragePath()
 
@@ -294,13 +300,14 @@ function initServices(): { storagePath: string; aiService: AIService; aiCommandS
 
   // Initialize logger first so all subsequent errors are captured
   initLogger(storagePath)
+  logStartup(APP_VERSION)
 
   // Global error handlers
   process.on('uncaughtException', (error) => {
-    logger.error('main:uncaughtException', error.message, { stack: error.stack })
+    logger.error(LOG_TAGS.MAIN.UNCAUGHT, error.message, { stack: error.stack })
   })
   process.on('unhandledRejection', (reason) => {
-    logger.error('main:unhandledRejection', String(reason))
+    logger.error(LOG_TAGS.MAIN.UNHANDLED, String(reason))
   })
 
   // Load or create config
@@ -321,7 +328,7 @@ function initServices(): { storagePath: string; aiService: AIService; aiCommandS
   // Initialize cloud sync service
   const cloudSyncService = new CloudSyncService()
 
-  logger.info('main:init', 'Services initialized', { storagePath })
+  logger.info(LOG_TAGS.MAIN.INIT, 'Services initialized', { storagePath })
 
   return { storagePath, aiService, aiCommandService, taskManager, cloudSyncService }
 }
@@ -338,7 +345,7 @@ app.whenReady().then(() => {
   _aiService = aiService
 
   // Read hotkey from config (falls back to DEFAULT_HOTKEY on first run)
-  currentHotkey = getConfig('hotkey') ?? DEFAULT_HOTKEY
+  currentHotkey = getConfig(CONFIG_KEYS.HOTKEY) ?? DEFAULT_HOTKEY
 
   // Remove default application menu on Windows/Linux (keep title bar)
   Menu.setApplicationMenu(null)
@@ -373,6 +380,8 @@ app.whenReady().then(() => {
 
   createTray()
   registerGlobalShortcut(currentHotkey)
+
+  logger.info(LOG_TAGS.MAIN.INIT, 'Ready')
 })
 
 // Keep service references for cleanup on quit

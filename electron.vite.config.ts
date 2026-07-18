@@ -27,7 +27,8 @@ export default defineConfig({
     },
     define: {
       'process.env.FLASHNOTE_NOTION_CLIENT_ID': JSON.stringify(loadEnv('FLASHNOTE_NOTION_CLIENT_ID')),
-      'process.env.FLASHNOTE_NOTION_CLIENT_SECRET': JSON.stringify(loadEnv('FLASHNOTE_NOTION_CLIENT_SECRET'))
+      'process.env.FLASHNOTE_NOTION_CLIENT_SECRET': JSON.stringify(loadEnv('FLASHNOTE_NOTION_CLIENT_SECRET')),
+      'process.env.FLASHNOTE_ONENOTE_CLIENT_ID': JSON.stringify(loadEnv('FLASHNOTE_ONENOTE_CLIENT_ID'))
     }
   },
   preload: {

@@ -55,3 +55,16 @@ export const logger = {
   warn: (source: string, msg: string, data?: unknown) => write('WARN', source, msg, data),
   error: (source: string, msg: string, data?: unknown) => write('ERROR', source, msg, data)
 }
+
+/**
+ * Log a startup banner with version and platform info.
+ * Call once right after initLogger, before any other app logic.
+ */
+export function logStartup(version: string): void {
+  const line = Array(60).fill('═').join('')
+  logger.info('main:init', line)
+  logger.info('main:init', `FlashNote v${version}`)
+  logger.info('main:init', `OS: ${process.platform} ${process.arch}`)
+  logger.info('main:init', `Electron: ${process.versions.electron}  Node: ${process.versions.node}`)
+  logger.info('main:init', line)
+}

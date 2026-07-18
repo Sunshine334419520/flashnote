@@ -11,6 +11,7 @@ import {
   listNotes,
   searchNotes
 } from './index.service'
+import { logger } from '../utils/logger'
 import type { Note, NoteCreateRequest, NoteUpdateRequest, SearchQuery, SearchResult } from '../../shared/types'
 
 // ============================================================
@@ -92,7 +93,7 @@ export function readNote(noteId: string): Note | null {
 
   // Verify the ID in frontmatter matches the filename
   if (note.id !== noteId) {
-    console.warn(`Note ID mismatch: file ${noteId} contains note ${note.id}`)
+    logger.warn('note:storage', 'Note ID mismatch', { fileId: noteId, noteId: note.id })
   }
 
   return note

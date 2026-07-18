@@ -57,6 +57,8 @@ export interface CloudConnectionRow {
   database_id: string | null
   database_url: string | null
   last_sync_at: string | null
+  refresh_token: string | null
+  token_expires_at: string | null
   status: string
   error: string | null
   created_at: string

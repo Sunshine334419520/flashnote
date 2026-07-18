@@ -23,7 +23,7 @@ describe('OAuthServer', () => {
       await server.stop()
     })
 
-    it('listens on 127.0.0.1 only (not public)', async () => {
+    it('listens and responds on localhost', async () => {
       const server = new OAuthServer()
       const { port } = await server.start(0)
 

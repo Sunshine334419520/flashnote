@@ -77,6 +77,9 @@ function runMigrations(database: Database.Database): void {
   if (version < 8) {
     applyMigration008(database)
   }
+  if (version < 9) {
+    applyMigration009(database)
+  }
 }
 
 function applyMigration001(database: Database.Database): void {
@@ -180,7 +183,7 @@ function applyMigration002(database: Database.Database): void {
   try {
     database.exec(`ALTER TABLE notes ADD COLUMN status TEXT NOT NULL DEFAULT 'draft'`)
   } catch {
-    // Column already exists — ignore
+    // Column already exists 閳?ignore
   }
 
   // Update all existing notes to 'published' (they predate the task system)
@@ -206,8 +209,8 @@ function applyMigration004(database: Database.Database): void {
 
 function applyMigration005(database: Database.Database): void {
   // Rebuild notes_fts with the `trigram` tokenizer so search works for CJK
-  // substrings (unicode61 indexed each CJK run as one token — "身份证" could not
-  // match inside "阳光的身份证号") and for mixed Latin/CJK queries.
+  // substrings (unicode61 indexed each CJK run as one token 閳?"闊偂鍞ょ拠? could not
+  // match inside "闂冨啿鍘滈惃鍕煩娴犲€熺槈閸?) and for mixed Latin/CJK queries.
   database.exec(`DROP TRIGGER IF EXISTS notes_ai`)
   database.exec(`DROP TRIGGER IF EXISTS notes_ad`)
   database.exec(`DROP TRIGGER IF EXISTS notes_au`)
@@ -292,7 +295,7 @@ function applyMigration007(database: Database.Database): void {
   try {
     database.exec(`ALTER TABLE notes ADD COLUMN sync_rev INTEGER NOT NULL DEFAULT 0`)
   } catch {
-    // Column already exists — ignore
+    // Column already exists 閳?ignore
   }
 
   database.prepare('INSERT INTO _schema_version (version) VALUES (7)').run()
@@ -303,8 +306,25 @@ function applyMigration008(database: Database.Database): void {
   try {
     database.exec(`ALTER TABLE notes ADD COLUMN base_rev INTEGER NOT NULL DEFAULT 0`)
   } catch {
-    // Column already exists — ignore
+    // Column already exists 閳?ignore
   }
 
   database.prepare('INSERT INTO _schema_version (version) VALUES (8)').run()
+}
+
+function applyMigration009(database: Database.Database): void {
+	// Add refresh_token + token_expires_at for OAuth providers that expire
+	// (OneNote / Microsoft Graph). Notion leaves them null.
+	try {
+		database.exec("ALTER TABLE cloud_connections ADD COLUMN refresh_token TEXT")
+	} catch {
+		// Column already exists 鈥?ignore
+	}
+	try {
+		database.exec("ALTER TABLE cloud_connections ADD COLUMN token_expires_at TEXT")
+	} catch {
+		// Column already exists 鈥?ignore
+	}
+
+	database.prepare('INSERT INTO _schema_version (version) VALUES (9)').run()
 }

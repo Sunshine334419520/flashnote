@@ -10,6 +10,7 @@ import type { AIProviderConfig, AIProviderType, SmartParseResult } from '../../.
 import type { SettingRow } from '../../database/schema'
 import { logger } from '../../utils/logger'
 import { maskSecrets } from '../../utils/mask'
+import { LOG_TAGS } from '../../../shared/logTags'
 import { AI_COMMAND, AI_LOG_PREVIEW_LENGTH } from '../../../shared/constants'
 
 export class AIService {
@@ -129,7 +130,7 @@ export class AIService {
     const signal = req.signal ? AbortSignal.any([req.signal, timeout]) : timeout
 
     const start = Date.now()
-    logger.info('ai:complete', 'request', {
+    logger.info(LOG_TAGS.AI.COMPLETE, 'request', {
       req: req.traceId,
       step: req.label,
       model: provider.config.model,
@@ -147,7 +148,7 @@ export class AIService {
             completion_tokens_details?: { reasoning_tokens?: number }
           }
         | undefined
-      logger.info('ai:complete', 'response', {
+      logger.info(LOG_TAGS.AI.COMPLETE, 'response', {
         req: req.traceId,
         step: req.label,
         elapsedMs: Date.now() - start,
@@ -160,7 +161,7 @@ export class AIService {
         preview: maskSecrets(res.content).slice(0, AI_LOG_PREVIEW_LENGTH)
       })
       if (res.finishReason === 'length') {
-        logger.warn('ai:complete', 'response truncated by max_tokens', {
+        logger.warn(LOG_TAGS.AI.COMPLETE, 'response truncated by max_tokens', {
           req: req.traceId,
           step: req.label,
           maxTokens: req.maxTokens
@@ -168,7 +169,7 @@ export class AIService {
       }
       return res.content
     } catch (err) {
-      logger.warn('ai:complete', 'failed', {
+      logger.warn(LOG_TAGS.AI.COMPLETE, 'failed', {
         req: req.traceId,
         step: req.label,
         elapsedMs: Date.now() - start,
@@ -196,7 +197,7 @@ export class AIService {
         if (config.isActive) this.activeProviderId = config.id
       }
     } catch (err) {
-      console.warn('Failed to load AI providers:', err)
+      logger.warn(LOG_TAGS.AI.COMPLETE, 'Failed to load providers', { error: (err as Error).message })
     }
   }
 
@@ -209,7 +210,7 @@ export class AIService {
         "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('ai_providers', ?, ?)"
       ).run(JSON.stringify(configs), now)
     } catch (err) {
-      console.error('Failed to save AI providers:', err)
+      logger.error(LOG_TAGS.AI.COMPLETE, 'Failed to save provider', { error: (err as Error).message })
     }
   }
 

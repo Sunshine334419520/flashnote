@@ -18,7 +18,7 @@ function makeSyncNote(overrides?: Partial<NoteForSync>): NoteForSync {
       id: 'test-id',
       ca: '2025-07-01T00:00:00.000Z',
       rev: 1,
-      ca: '2025-07-01T00:00:00.000Z',
+      ua: '2025-07-01T00:00:00.000Z',
       ic: true,
       me: false,
       sh: 'cli',
