@@ -17,6 +17,7 @@ import type {
   NoteMeta
 } from './adapter'
 import { logger } from '../../utils/logger'
+import { LOG_TAGS } from '../../../shared/logTags'
 
 const API = NOTION_API_BASE
 const HEADERS = {
@@ -92,6 +93,40 @@ const STATUS_LABEL_REVERSE: Record<string, string> = {
 export class NotionAdapter implements CloudSyncAdapter {
   readonly service: CloudServiceType = 'notion'
 
+  /**
+   * Wrapper around fetch that logs every request and response.
+   * Every HTTP call in this class goes through this method.
+   */
+  private async loggedFetch(label: string, url: string, options: Record<string, unknown>, timeoutMs = 0): Promise<Response> {
+    const method = (options.method as string) ?? 'GET'
+    logger.info(LOG_TAGS.CLOUD.NOTION, `[${label}] ${method} ${url}`)
+
+    let useOpts = { ...options }
+    if (timeoutMs > 0) {
+      const controller = new AbortController()
+      const timer = setTimeout(() => {
+        logger.warn(LOG_TAGS.CLOUD.NOTION, `[${label}] ${method} ${url} — ${timeoutMs}ms timeout, aborting`)
+        controller.abort()
+      }, timeoutMs)
+      useOpts = { ...useOpts, signal: controller.signal }
+      // Note: clearTimeout not shown here for brevity, but callers should handle it
+    }
+
+    const startedAt = Date.now()
+    try {
+      const res = await fetch(url, useOpts as RequestInit)
+      const elapsed = Date.now() - startedAt
+      logger.info(LOG_TAGS.CLOUD.NOTION, `[${label}] ${method} ${url} → ${res.status} ${res.statusText} (${elapsed}ms)`)
+      return res
+    } catch (err) {
+      const elapsed = Date.now() - startedAt
+      const name = (err as Error).name
+      const msg = String(err)
+      logger.error(LOG_TAGS.CLOUD.NOTION, `[${label}] ${method} ${url} FAILED`, { errorName: name, error: msg.substring(0, 300), elapsed })
+      throw err
+    }
+  }
+
   // ── OAuth ─────────────────────────────────────────────────
 
   getAuthUrl(state: string, redirectUri: string): string {
@@ -107,19 +142,8 @@ export class NotionAdapter implements CloudSyncAdapter {
 
   async exchangeCode(code: string, redirectUri: string): Promise<AuthResult> {
     const auth = Buffer.from(`${NOTION_CLIENT_ID}:${NOTION_CLIENT_SECRET}`).toString('base64')
-    const clientIdPrefix = NOTION_CLIENT_ID.substring(0, 8)
 
-    logger.info('cloud:notion', `exchangeCode: POST ${NOTION_TOKEN_URL}`, { clientId: clientIdPrefix + '...', redirectUri, codePrefix: code.substring(0, 8) + '...' })
-
-    const controller = new AbortController()
-    const timeout = setTimeout(() => {
-      logger.warn('cloud:notion', 'exchangeCode: 30s timeout — aborting fetch')
-      controller.abort()
-    }, 30_000)
-
-    try {
-    const startedAt = Date.now()
-    const res = await fetch(NOTION_TOKEN_URL, {
+    const res = await this.loggedFetch('exchangeCode', NOTION_TOKEN_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -130,14 +154,12 @@ export class NotionAdapter implements CloudSyncAdapter {
         grant_type: 'authorization_code',
         code,
         redirect_uri: redirectUri
-      }),
-      signal: controller.signal
-    })
-    logger.info('cloud:notion', `exchangeCode: response ${res.status}`, { elapsed: Date.now() - startedAt })
+      })
+    }, 30_000)
 
     if (!res.ok) {
       const text = await res.text()
-      logger.error('cloud:notion', 'exchangeCode: token endpoint returned error', { status: res.status, body: text.substring(0, 200) })
+      logger.error(LOG_TAGS.CLOUD.NOTION, 'exchangeCode: token endpoint returned error', { status: res.status, body: text.substring(0, 200) })
       throw new Error(`Notion token exchange failed (${res.status}): ${text}`)
     }
 
@@ -155,19 +177,12 @@ export class NotionAdapter implements CloudSyncAdapter {
       accountName: data.owner?.user?.name,
       accountEmail: data.owner?.user?.person?.email
     }
-    } catch (err) {
-      const name = (err as Error).name
-      logger.error('cloud:notion', 'exchangeCode: fetch failed', { errorName: name, error: String(err) })
-      throw err
-    } finally {
-      clearTimeout(timeout)
-    }
   }
 
   // ── User info ─────────────────────────────────────────────
 
   async getUserInfo(accessToken: string): Promise<UserInfo> {
-    const res = await fetch(`${API}/users/me`, {
+    const res = await this.loggedFetch('getUserInfo', `${API}/users/me`, {
       headers: { ...HEADERS, 'Authorization': `Bearer ${accessToken}` }
     })
 
@@ -192,7 +207,7 @@ export class NotionAdapter implements CloudSyncAdapter {
 
   async ensureDatabase(accessToken: string): Promise<DatabaseInfo> {
     // 1. Search for existing FlashNote database
-    const searchRes = await fetch(`${API}/search`, {
+    const searchRes = await this.loggedFetch('searchDB', `${API}/search`, {
       method: 'POST',
       headers: { ...HEADERS, 'Authorization': `Bearer ${accessToken}` },
       body: JSON.stringify({
@@ -214,12 +229,12 @@ export class NotionAdapter implements CloudSyncAdapter {
     )
 
     if (existing) {
-      logger.info('cloud:notion', `Found existing database: ${existing.id}`)
+      logger.info(LOG_TAGS.CLOUD.NOTION, `Found existing database: ${existing.id}`)
       return { id: existing.id, url: existing.url ?? '' }
     }
 
     // 2. Create a top-level page to hold the database
-    const pageRes = await fetch(`${API}/pages`, {
+    const pageRes = await this.loggedFetch('createPage', `${API}/pages`, {
       method: 'POST',
       headers: { ...HEADERS, 'Authorization': `Bearer ${accessToken}` },
       body: JSON.stringify({
@@ -238,7 +253,7 @@ export class NotionAdapter implements CloudSyncAdapter {
     const pageData = (await pageRes.json()) as { id: string }
 
     // 3. Create the database as a child of that page
-    const dbRes = await fetch(`${API}/databases`, {
+    const dbRes = await this.loggedFetch('createDB', `${API}/databases`, {
       method: 'POST',
       headers: { ...HEADERS, 'Authorization': `Bearer ${accessToken}` },
       body: JSON.stringify({
@@ -254,7 +269,7 @@ export class NotionAdapter implements CloudSyncAdapter {
     }
 
     const dbData = (await dbRes.json()) as { id: string; url?: string }
-    logger.info('cloud:notion', `Created database: ${dbData.id}`)
+    logger.info(LOG_TAGS.CLOUD.NOTION, `Created database: ${dbData.id}`)
 
     return { id: dbData.id, url: dbData.url ?? '' }
   }
@@ -282,7 +297,7 @@ export class NotionAdapter implements CloudSyncAdapter {
         body.start_cursor = cursor
       }
 
-      const res = await fetch(`${API}/databases/${databaseId}/query`, {
+      const res = await this.loggedFetch('listNotes', `${API}/databases/${databaseId}/query`, {
         method: 'POST',
         headers: { ...HEADERS, 'Authorization': `Bearer ${accessToken}` },
         body: JSON.stringify(body)
@@ -313,7 +328,7 @@ export class NotionAdapter implements CloudSyncAdapter {
   }
 
   async createNote(accessToken: string, databaseId: string, note: NoteForSync): Promise<string> {
-    const res = await fetch(`${API}/pages`, {
+    const res = await this.loggedFetch('createNote', `${API}/pages`, {
       method: 'POST',
       headers: { ...HEADERS, 'Authorization': `Bearer ${accessToken}` },
       body: JSON.stringify({
@@ -332,7 +347,7 @@ export class NotionAdapter implements CloudSyncAdapter {
   }
 
   async updateNote(accessToken: string, pageId: string, note: NoteForSync): Promise<void> {
-    const res = await fetch(`${API}/pages/${pageId}`, {
+    const res = await this.loggedFetch('updateNote', `${API}/pages/${pageId}`, {
       method: 'PATCH',
       headers: { ...HEADERS, 'Authorization': `Bearer ${accessToken}` },
       body: JSON.stringify({
@@ -348,7 +363,7 @@ export class NotionAdapter implements CloudSyncAdapter {
 
   async deleteNote(accessToken: string, pageId: string): Promise<void> {
     // Notion API: archive the page (soft delete)
-    const res = await fetch(`${API}/blocks/${pageId}`, {
+    const res = await this.loggedFetch('deleteNote', `${API}/blocks/${pageId}`, {
       method: 'PATCH',
       headers: { ...HEADERS, 'Authorization': `Bearer ${accessToken}` },
       body: JSON.stringify({ archived: true })

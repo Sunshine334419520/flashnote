@@ -2,6 +2,7 @@ import type { Note, SyncResult } from '../../../shared/types'
 import type { CloudSyncAdapter, NoteMeta, NoteForSync, RemoteNote } from './adapter'
 import { getNotes, createNote, modifyNote, removeNote, readNote } from '../storage.service'
 import { logger } from '../../utils/logger'
+import { LOG_TAGS } from '../../../shared/logTags'
 
 export interface ConnectionConfig {
   accessToken: string
@@ -98,13 +99,16 @@ export class SyncEngine {
     try {
       remoteNotes = await this.adapter.listNotes(conn.accessToken, conn.databaseId)
     } catch (err) {
-      logger.error('cloud:sync', 'Failed to list remote notes', { error: String(err) })
+      logger.error(LOG_TAGS.CLOUD.SYNC, 'Failed to list remote notes', { error: String(err) })
       result.errors.push(`list remote: ${String(err)}`)
       return result
     }
 
     // 3. Index
-    logger.info('cloud:sync', `Comparing: ${localNotes.length} local, ${remoteNotes.length} remote`)
+    logger.info(LOG_TAGS.CLOUD.SYNC, `Comparing: ${localNotes.length} local, ${remoteNotes.length} remote`)
+
+    // Log local notes
+    for (const n of localNotes) logger.info(LOG_TAGS.CLOUD.SYNC, `  local: ${n.id} syncRev=${n.syncRev} baseRev=${n.baseRev}`)
 
     const localMap = new Map<string, Note>()
     for (const n of localNotes) localMap.set(n.id, n)
@@ -137,7 +141,7 @@ export class SyncEngine {
           } else {
             // Real conflict: both local and remote have diverged
             const msg = `conflict: "${local.title}" edited on both sides`
-            logger.warn('cloud:sync', msg, { noteId: local.id, localRev: local.syncRev, remoteRev: remote.meta.rev, baseRev: local.baseRev })
+            logger.warn(LOG_TAGS.CLOUD.SYNC, msg, { noteId: local.id, localRev: local.syncRev, remoteRev: remote.meta.rev, baseRev: local.baseRev })
             result.errors.push(msg)
           }
         } else {
@@ -159,7 +163,7 @@ export class SyncEngine {
         try {
           removeNote(local.id)
           deletedLocally.add(local.id)
-          logger.info('cloud:sync', `Remote delete: "${local.title}"`, { noteId: local.id })
+          logger.info(LOG_TAGS.CLOUD.SYNC, `Remote delete: "${local.title}"`, { noteId: local.id })
         } catch (err) {
           result.errors.push(`delete ${local.id}: ${String(err)}`)
         }
@@ -182,7 +186,7 @@ export class SyncEngine {
             await this.adapter.createNote(conn.accessToken, conn.databaseId, SyncEngine.toSyncPayload(local))
             this.updateBaseRev(local.id, local.syncRev)
             result.pushed++
-            logger.info('cloud:sync', `Pushed new: "${local.title}"`, { noteId: local.id, syncRev: local.syncRev })
+            logger.info(LOG_TAGS.CLOUD.SYNC, `Pushed new: "${local.title}"`, { noteId: local.id, syncRev: local.syncRev })
           } catch (err) {
             result.errors.push(`push ${local.id}: ${String(err)}`)
           }
@@ -209,7 +213,7 @@ export class SyncEngine {
       }
     }
 
-    logger.info('cloud:sync', `Sync done: +${result.pushed} -${result.pulled} =${result.skipped} (${localNotes.length}L/${remoteNotes.length}R)`, {
+    logger.info(LOG_TAGS.CLOUD.SYNC, `Sync done: +${result.pushed} -${result.pulled} =${result.skipped} (${localNotes.length}L/${remoteNotes.length}R)`, {
       errors: result.errors.length
     })
 
@@ -238,7 +242,7 @@ export class SyncEngine {
         await this.adapter.createNote(conn.accessToken, conn.databaseId, payload)
       }
     } catch (err) {
-      logger.error('cloud:sync', `pushNote failed for ${noteId}`, { error: String(err) })
+      logger.error(LOG_TAGS.CLOUD.SYNC, `pushNote failed for ${noteId}`, { error: String(err) })
     }
   }
 
@@ -250,7 +254,7 @@ export class SyncEngine {
         await this.adapter.deleteNote(conn.accessToken, remote.pageId)
       }
     } catch (err) {
-      logger.error('cloud:sync', `deleteRemoteNote failed for ${noteId}`, { error: String(err) })
+      logger.error(LOG_TAGS.CLOUD.SYNC, `deleteRemoteNote failed for ${noteId}`, { error: String(err) })
     }
   }
 
@@ -267,7 +271,7 @@ export class SyncEngine {
           this.upsertLocalNote(SyncEngine.remoteToLocalNote(remote))
           imported++
         } catch (err) {
-          logger.error('cloud:sync', `pullAll: failed to import ${remote.flashnoteId}`, { error: String(err) })
+          logger.error(LOG_TAGS.CLOUD.SYNC, `pullAll: failed to import ${remote.flashnoteId}`, { error: String(err) })
         }
       }
     }
@@ -293,23 +297,45 @@ export class SyncEngine {
         })
       }
     } catch (err) {
-      logger.error('cloud:sync', `updateBaseRev failed for ${noteId}`, { error: String(err) })
+      logger.error(LOG_TAGS.CLOUD.SYNC, `updateBaseRev failed for ${noteId}`, { error: String(err) })
     }
   }
 
   private upsertLocalNote(note: Note): void {
     const existing = readNote(note.id)
     if (existing) {
-      modifyNote({
-        id: note.id,
-        title: note.title,
-        content: note.content,
-        category: note.category,
-        tags: note.tags,
-        status: note.status,
-        syncRev: note.syncRev,
-        baseRev: note.baseRev
-      })
+      // Markdown file exists. Try to update SQLite index. If that fails
+      // (e.g. DB was recreated and SQLite row is missing), fall back to
+      // createNote which re-indexes from scratch.
+      try {
+        modifyNote({
+          id: note.id,
+          title: note.title,
+          content: note.content,
+          category: note.category,
+          tags: note.tags,
+          status: note.status,
+          syncRev: note.syncRev,
+          baseRev: note.baseRev
+        })
+      } catch {
+        logger.warn(LOG_TAGS.CLOUD.SYNC, `upsertLocalNote: modifyNote failed for ${note.id}, falling back to createNote`)
+        createNote(
+          { content: note.content },
+          {
+            id: note.id,
+            type: note.type,
+            category: note.category,
+            tags: note.tags,
+            title: note.title,
+            sensitive: note.sensitive,
+            typedData: note.typedData,
+            status: note.status,
+            syncRev: note.syncRev,
+            baseRev: note.baseRev
+          }
+        )
+      }
     } else {
       createNote(
         { content: note.content },

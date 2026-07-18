@@ -21,6 +21,7 @@ import type {
   NoteMeta
 } from './adapter'
 import { logger } from '../../utils/logger'
+import { LOG_TAGS } from '../../../shared/logTags'
 
 const GRAPH = ONENOTE_GRAPH_BASE
 const HEADERS_JSON = { 'Content-Type': 'application/json' }
@@ -62,7 +63,7 @@ function parseMetaFromHtml(html: string): { meta: NoteMeta; bodyWithoutMeta: str
     const bodyWithoutMeta = html.replace(match[0], '')
     return { meta, bodyWithoutMeta }
   } catch {
-    logger.warn('cloud:onenote', 'Failed to parse meta div')
+    logger.warn(LOG_TAGS.CLOUD.ONENOTE, 'Failed to parse meta div')
     return null
   }
 }
@@ -273,9 +274,9 @@ export class OnenoteAdapter implements CloudSyncAdapter {
         displayName: ONENOTE_NOTEBOOK_TITLE
       }, 'application/json') as { id: string; displayName: string; links?: { oneNoteWebUrl?: { href?: string } } }
       notebook = created
-      logger.info('cloud:onenote', `Created notebook: ${ONENOTE_NOTEBOOK_TITLE}`)
+      logger.info(LOG_TAGS.CLOUD.ONENOTE, `Created notebook: ${ONENOTE_NOTEBOOK_TITLE}`)
     } else {
-      logger.info('cloud:onenote', `Found existing notebook: ${notebook.id}`)
+      logger.info(LOG_TAGS.CLOUD.ONENOTE, `Found existing notebook: ${notebook.id}`)
     }
 
     // 2. Find or create the Notes section
@@ -289,9 +290,9 @@ export class OnenoteAdapter implements CloudSyncAdapter {
         displayName: ONENOTE_SECTION_TITLE
       }, 'application/json') as { id: string; displayName: string }
       section = created
-      logger.info('cloud:onenote', `Created section: ${ONENOTE_SECTION_TITLE}`)
+      logger.info(LOG_TAGS.CLOUD.ONENOTE, `Created section: ${ONENOTE_SECTION_TITLE}`)
     } else {
-      logger.info('cloud:onenote', `Found existing section: ${section.id}`)
+      logger.info(LOG_TAGS.CLOUD.ONENOTE, `Found existing section: ${section.id}`)
     }
 
     this.sectionId = section.id
@@ -323,7 +324,7 @@ export class OnenoteAdapter implements CloudSyncAdapter {
           headers: { Authorization: `Bearer ${accessToken}` }
         })
         if (!res.ok) {
-          logger.warn('cloud:onenote', `Failed to fetch page content ${page.id} (${res.status})`)
+          logger.warn(LOG_TAGS.CLOUD.ONENOTE, `Failed to fetch page content ${page.id} (${res.status})`)
           continue
         }
         const html = await res.text()
@@ -353,7 +354,7 @@ export class OnenoteAdapter implements CloudSyncAdapter {
           lastEditedAt: page.lastModifiedDateTime ?? new Date().toISOString()
         })
       } catch (err) {
-        logger.error('cloud:onenote', `Failed to parse page ${page.id}`, { error: String(err) })
+        logger.error(LOG_TAGS.CLOUD.ONENOTE, `Failed to parse page ${page.id}`, { error: String(err) })
       }
     }
 
@@ -394,7 +395,7 @@ export class OnenoteAdapter implements CloudSyncAdapter {
     try {
       await graphDelete(accessToken, `/me/onenote/pages/${pageId}`)
     } catch (err) {
-      logger.warn('cloud:onenote', `Delete before update failed for ${pageId}`, { error: String(err) })
+      logger.warn(LOG_TAGS.CLOUD.ONENOTE, `Delete before update failed for ${pageId}`, { error: String(err) })
     }
 
     // Recreate with new content (reuse createNote logic but return void)
@@ -403,7 +404,7 @@ export class OnenoteAdapter implements CloudSyncAdapter {
 
   async deleteNote(accessToken: string, pageId: string): Promise<void> {
     await graphDelete(accessToken, `/me/onenote/pages/${pageId}`)
-    logger.info('cloud:onenote', `Deleted page: ${pageId}`)
+    logger.info(LOG_TAGS.CLOUD.ONENOTE, `Deleted page: ${pageId}`)
   }
 }
 

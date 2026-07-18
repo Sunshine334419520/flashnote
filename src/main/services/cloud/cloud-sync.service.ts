@@ -2,11 +2,12 @@ import { v4 as uuidv4 } from 'uuid'
 import { getDatabase } from '../../database/connection'
 import { broadcast } from '../../utils/broadcast'
 import { logger } from '../../utils/logger'
+import { LOG_TAGS } from '../../../shared/logTags'
 import {
   NOTION_REDIRECT_PORT,
   ONENOTE_REDIRECT_PORT
 } from '../../../shared/constants'
-import { SYNC_PHASES } from '../../../shared/types'
+import { SYNC_PHASES, CLOUD_STATUS } from '../../../shared/types'
 import type { CloudConnection, SyncProgress, SyncResult, CloudServiceType, SyncPhase } from '../../../shared/types'
 import { IPC_CHANNELS } from '../../../shared/ipc-channels'
 import type { CloudConnectionRow } from '../../database/schema'
@@ -98,7 +99,7 @@ export class CloudSyncService {
       const state = uuidv4()
       const authUrl = this.adapter!.getAuthUrl(state, redirectUri)
 
-      logger.info('cloud:service', `OAuth URL ready at port ${port}`)
+      logger.info(LOG_TAGS.CLOUD.SERVICE, `OAuth URL ready at port ${port}`)
 
       // 3. Delete any lingering rows (disconnect only removes active one; be safe)
       const db = getDatabase()
@@ -120,7 +121,7 @@ export class CloudSyncService {
         last_sync_at: null,
         refresh_token: null,
         token_expires_at: null,
-        status: 'connecting',
+        status: CLOUD_STATUS.CONNECTING,
         error: null,
         created_at: now,
         updated_at: now
@@ -129,19 +130,19 @@ export class CloudSyncService {
       broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, {
         id: tempId,
         service,
-        status: 'connecting'
+        status: CLOUD_STATUS.CONNECTING
       })
 
       // 5. Store pending auth state + start background wait for callback
       this.pendingAuth = { server: authServer, state, redirectUri, tempId, authUrl, service }
-      logger.info('cloud:service', 'connect: pendingAuth set', { tempId, service })
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'connect: pendingAuth set', { tempId, service })
 
       // Fire-and-forget: wait for the browser callback, then complete auth
       authServer.waitForCallback()
         .then(({ code }) => this.completeAuth(code))
         .catch((err) => {
-          logger.error('cloud:service', 'OAuth callback failed', { error: String(err) })
-          this.updateConnectionStatus(tempId, 'error', String(err))
+          logger.error(LOG_TAGS.CLOUD.SERVICE, 'OAuth callback failed', { error: String(err) })
+          this.updateConnectionStatus(tempId, CLOUD_STATUS.ERROR, String(err))
           broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getConnection(tempId))
           authServer.stop()
         })
@@ -150,7 +151,7 @@ export class CloudSyncService {
       return {
         id: tempId,
         service,
-        status: 'connecting',
+        status: CLOUD_STATUS.CONNECTING,
         createdAt: now
       }
     } catch (err) {
@@ -164,30 +165,30 @@ export class CloudSyncService {
    * Called internally when the OAuth server receives the callback.
    */
   private async completeAuth(code: string): Promise<void> {
-    logger.info('cloud:service', 'completeAuth: called', { hasPending: !!this.pendingAuth })
+    logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: called', { hasPending: !!this.pendingAuth })
 
     const pending = this.pendingAuth
     if (!pending) {
-      logger.error('cloud:service', 'completeAuth: NO PENDING AUTH — callback arrived but state was lost')
+      logger.error(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: NO PENDING AUTH — callback arrived but state was lost')
       return
     }
 
     this.pendingAuth = null
     const { server, redirectUri, tempId, service } = pending
-    logger.info('cloud:service', 'completeAuth: start', { service, tempId })
+    logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: start', { service, tempId })
 
     try {
       // 1. Exchange code for token
-      logger.info('cloud:service', 'completeAuth: exchanging code...')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: exchanging code...')
       const authResult = await this.adapter!.exchangeCode(code, redirectUri)
-      logger.info('cloud:service', 'completeAuth: token obtained')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: token obtained')
 
       // Stop server in background — don't await. server.close()
       // waits for HTTP keep-alive connections which can hang.
       server.stop().catch(() => { /* ignore */ })
 
       // 2. Save as 'initializing' — broadcast immediately so UI updates
-      logger.info('cloud:service', 'completeAuth: saving initializing...')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: saving initializing...')
       const now = new Date().toISOString()
       this.upsertConnection({
         id: tempId, service,
@@ -197,30 +198,30 @@ export class CloudSyncService {
         database_id: null, database_url: null, last_sync_at: null,
         refresh_token: authResult.refreshToken ?? null,
         token_expires_at: authResult.expiresAt ? String(authResult.expiresAt) : null,
-        status: 'initializing', error: null, created_at: now, updated_at: now
+        status: CLOUD_STATUS.INITIALIZING, error: null, created_at: now, updated_at: now
       })
-      logger.info('cloud:service', 'completeAuth: saved, broadcasting initializing...')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: saved, broadcasting initializing...')
       const initConn = this.getConnection(tempId)
-      logger.info('cloud:service', 'completeAuth: getConnection returned', { hasConn: !!initConn, status: initConn?.status })
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: getConnection returned', { hasConn: !!initConn, status: initConn?.status })
       broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, initConn)
-      logger.info('cloud:service', 'completeAuth: broadcast done, status → initializing')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: broadcast done, status → initializing')
 
       // 3. Init remote + initial sync. AWAITED — guarantees database_id
       //    is set before 'connected'. B machine finds A's existing DB here.
-      logger.info('cloud:service', 'completeAuth: calling initRemote...')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: calling initRemote...')
       await this.initRemote(tempId, authResult.accessToken)
-      logger.info('cloud:service', 'completeAuth: initRemote done')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: initRemote done')
 
       // 4. All ready
-      logger.info('cloud:service', 'completeAuth: marking connected...')
-      this.updateConnectionStatus(tempId, 'connected')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: marking connected...')
+      this.updateConnectionStatus(tempId, CLOUD_STATUS.CONNECTED)
       broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
-      logger.info('cloud:service', 'completeAuth: status → connected, broadcast done')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: status → connected, broadcast done')
       this.startPolling()
-      logger.info('cloud:service', 'completeAuth: polling started, DONE')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: polling started, DONE')
     } catch (err) {
-      logger.error('cloud:service', 'completeAuth: FAILED', { error: String(err) })
-      this.updateConnectionStatus(tempId, 'error', String(err))
+      logger.error(LOG_TAGS.CLOUD.SERVICE, 'completeAuth: FAILED', { error: String(err) })
+      this.updateConnectionStatus(tempId, CLOUD_STATUS.ERROR, String(err))
       broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getConnection(tempId))
       server.stop().catch(() => { /* ignore */ })
     }
@@ -232,25 +233,25 @@ export class CloudSyncService {
    * Also used by ensureFreshToken to recover a missing database_id.
    */
   async initRemote(connId: string, accessToken: string): Promise<void> {
-    logger.info('cloud:service', 'initRemote: start')
+    logger.info(LOG_TAGS.CLOUD.SERVICE, 'initRemote: start')
     this.broadcastProgress(SYNC_PHASES.COMPARING, 0, 0)
 
-    logger.info('cloud:service', 'initRemote: calling ensureDatabase...')
+    logger.info(LOG_TAGS.CLOUD.SERVICE, 'initRemote: calling ensureDatabase...')
     const dbInfo = await this.adapter!.ensureDatabase(accessToken)
-    logger.info('cloud:service', 'initRemote: db ready', { id: dbInfo.id })
+    logger.info(LOG_TAGS.CLOUD.SERVICE, 'initRemote: db ready', { id: dbInfo.id })
 
     const db = getDatabase()
     db.prepare(
       "UPDATE cloud_connections SET database_id = ?, database_url = ?, updated_at = datetime('now') WHERE id = ?"
     ).run(dbInfo.id, dbInfo.url, connId)
-    logger.info('cloud:service', 'initRemote: database_id saved')
+    logger.info(LOG_TAGS.CLOUD.SERVICE, 'initRemote: database_id saved')
 
-    logger.info('cloud:service', 'initRemote: running sync...')
+    logger.info(LOG_TAGS.CLOUD.SERVICE, 'initRemote: running sync...')
     const result = await this.syncEngine!.syncAll({
       accessToken,
       databaseId: dbInfo.id
     })
-    logger.info('cloud:service', 'initRemote: sync done', {
+    logger.info(LOG_TAGS.CLOUD.SERVICE, 'initRemote: sync done', {
       pushed: result.pushed, pulled: result.pulled, errors: result.errors.length
     })
 
@@ -272,7 +273,7 @@ export class CloudSyncService {
 
     // Stop any pending OAuth auth server (port cleanup)
     if (this.pendingAuth) {
-      logger.info('cloud:service', 'disconnect: clearing pendingAuth')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'disconnect: clearing pendingAuth')
       this.pendingAuth.server.stop()
       this.pendingAuth = null
     }
@@ -308,7 +309,7 @@ export class CloudSyncService {
    */
   private async ensureFreshToken(): Promise<ConnectionConfig> {
     let conn = this.getActiveConnection()
-    if (!conn || conn.status !== 'connected') {
+    if (!conn || conn.status !== CLOUD_STATUS.CONNECTED) {
       throw new Error('Not connected to cloud')
     }
 
@@ -316,7 +317,7 @@ export class CloudSyncService {
     // or B machine connects to an A-machine-created database), recover by
     // searching the remote side for the existing database.
     if (!conn.database_id) {
-      logger.info('cloud:service', 'database_id missing — searching remote for existing database')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'database_id missing — searching remote for existing database')
       await this.recoverDatabase(conn)
       conn = this.getActiveConnection()
       if (!conn?.database_id) {
@@ -345,7 +346,7 @@ export class CloudSyncService {
     }
 
     try {
-      logger.info('cloud:service', 'Refreshing access token')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'Refreshing access token')
       const fresh = await this.adapter.refreshAccessToken(conn.refresh_token)
       const db = getDatabase()
       db.prepare(
@@ -354,7 +355,7 @@ export class CloudSyncService {
       ).run(fresh.accessToken, fresh.refreshToken ?? null, fresh.expiresAt ? String(fresh.expiresAt) : null, conn.id)
       return { accessToken: fresh.accessToken, databaseId: conn.database_id! }
     } catch (err) {
-      logger.error('cloud:service', 'Token refresh failed', { error: String(err) })
+      logger.error(LOG_TAGS.CLOUD.SERVICE, 'Token refresh failed', { error: String(err) })
       return { accessToken: conn.access_token, databaseId: conn.database_id! }
     }
   }
@@ -375,7 +376,7 @@ export class CloudSyncService {
 
     // Reuse initRemote logic: it searches for existing DB and syncs
     await this.initRemote(conn.id, conn.access_token)
-    logger.info('cloud:service', `Recovered database`)
+    logger.info(LOG_TAGS.CLOUD.SERVICE, `Recovered database`)
   }
 
   /** Manual full sync. */
@@ -421,7 +422,7 @@ export class CloudSyncService {
    */
   schedulePush(noteId: string, action: 'create' | 'update' | 'delete'): void {
     const conn = this.getActiveConnection()
-    if (!conn || conn.status !== 'connected') return
+    if (!conn || conn.status !== CLOUD_STATUS.CONNECTED) return
 
     // Merge consecutive operations on the same note
     const existing = this.pushQueue.get(noteId)
@@ -460,7 +461,7 @@ export class CloudSyncService {
           await this.syncEngine!.pushNote(config, noteId)
         }
       } catch (err) {
-        logger.error('cloud:service', `Auto-sync failed for ${noteId}`, { error: String(err) })
+        logger.error(LOG_TAGS.CLOUD.SERVICE, `Auto-sync failed for ${noteId}`, { error: String(err) })
       }
       done++
       this.broadcastProgress(SYNC_PHASES.PUSHING, done, queue.size)
@@ -511,11 +512,11 @@ export class CloudSyncService {
     try {
       config = await this.ensureFreshToken()
     } catch {
-      logger.info('cloud:service', 'Poll skipped: not connected')
+      logger.info(LOG_TAGS.CLOUD.SERVICE, 'Poll skipped: not connected')
       return
     }
 
-    logger.info('cloud:service', 'Poll sync started')
+    logger.info(LOG_TAGS.CLOUD.SERVICE, 'Poll sync started')
     this.broadcastProgress(SYNC_PHASES.COMPARING, 0, 0)
     const startedAt = Date.now()
 
@@ -525,9 +526,9 @@ export class CloudSyncService {
       this.finishPollSync(startedAt, () => {
         broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
       })
-      logger.info('cloud:service', `Poll sync done: +${result.pushed} -${result.pulled} =${result.skipped}`)
+      logger.info(LOG_TAGS.CLOUD.SERVICE, `Poll sync done: +${result.pushed} -${result.pulled} =${result.skipped}`)
     }).catch((err) => {
-      logger.error('cloud:service', 'Poll sync failed', { error: String(err) })
+      logger.error(LOG_TAGS.CLOUD.SERVICE, 'Poll sync failed', { error: String(err) })
       this.finishPollSync(startedAt)
     })
   }

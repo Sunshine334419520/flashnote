@@ -18,6 +18,7 @@ import type { AICandidate } from './prompts'
 import type { AIService } from './index'
 import { logger } from '../../utils/logger'
 import { maskSecrets } from '../../utils/mask'
+import { LOG_TAGS } from '../../../shared/logTags'
 import { AI_COMMAND } from '../../../shared/constants'
 import type {
   AICommandRequest,
@@ -44,7 +45,7 @@ export class AICommandService {
     let type = req.type
     let raw = req.raw
 
-    logger.info('ai:cmd', 'run', {
+    logger.info(LOG_TAGS.AI.CMD, 'run', {
       req: req.id,
       type: req.type,
       explicit: req.explicit,
@@ -80,7 +81,7 @@ export class AICommandService {
   confirm(req: AICommandConfirmRequest): AICommandConfirmResult {
     if (req.type === 'delete') {
       for (const id of req.noteIds) removeNote(id)
-      logger.info('ai:delete', 'confirmed', { count: req.noteIds.length, noteIds: req.noteIds })
+      logger.info(LOG_TAGS.AI.DELETE, 'confirmed', { count: req.noteIds.length, noteIds: req.noteIds })
       return { kind: 'deleted', count: req.noteIds.length }
     }
     const note = modifyNote({
@@ -90,17 +91,17 @@ export class AICommandService {
       category: req.proposed.category,
       tags: req.proposed.tags
     })
-    logger.info('ai:edit', 'confirmed', { noteId: req.noteId, fields: Object.keys(req.proposed) })
+    logger.info(LOG_TAGS.AI.EDIT, 'confirmed', { noteId: req.noteId, fields: Object.keys(req.proposed) })
     return { kind: 'edited', note }
   }
 
   // ── search: FTS recall → LLM rerank ──────────────────────────────────
 
   private async search(query: string, signal: AbortSignal, traceId: string): Promise<Note[]> {
-    logger.info('ai:search', 'input', { req: traceId, query: maskSecrets(query) })
+    logger.info(LOG_TAGS.AI.SEARCH, 'input', { req: traceId, query: maskSecrets(query) })
 
     const candidates = recallCandidates(query, AI_COMMAND.CANDIDATE_LIMIT)
-    logger.info('ai:search', 'recall', {
+    logger.info(LOG_TAGS.AI.SEARCH, 'recall', {
       req: traceId,
       count: candidates.length,
       notes: candidates.slice(0, 20).map((n) => ({ id: n.id, type: n.type, title: maskSecrets(n.title) }))
@@ -121,7 +122,7 @@ export class AICommandService {
       interpretation?: string
       ranked?: Array<{ i?: number; score?: number }>
     }>(raw)
-    if (!parsed) logParseFailure('ai:search', 'search.rerank', traceId, raw)
+    if (!parsed) logParseFailure(LOG_TAGS.AI.SEARCH, 'search.rerank', traceId, raw)
 
     const results: Array<{ note: Note; score?: number }> = []
     for (const r of parsed?.ranked ?? []) {
@@ -131,7 +132,7 @@ export class AICommandService {
     }
     results.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
 
-    logger.info('ai:search', 'ranked', {
+    logger.info(LOG_TAGS.AI.SEARCH, 'ranked', {
       req: traceId,
       interpretation: parsed?.interpretation ?? '',
       kept: results.length,
@@ -144,10 +145,10 @@ export class AICommandService {
   // ── add: AI parse (logged) → publish ─────────────────────────────────
 
   private async add(raw: string, signal: AbortSignal, traceId: string): Promise<Note> {
-    logger.info('ai:add', 'input', { req: traceId, raw: maskSecrets(raw) })
+    logger.info(LOG_TAGS.AI.ADD, 'input', { req: traceId, raw: maskSecrets(raw) })
 
     const parsed = await this.parseForAdd(raw, signal, traceId)
-    logger.info('ai:add', 'parsed', {
+    logger.info(LOG_TAGS.AI.ADD, 'parsed', {
       req: traceId,
       type: parsed.type,
       title: maskSecrets(parsed.title),
@@ -169,7 +170,7 @@ export class AICommandService {
         status: 'published'
       }
     )
-    logger.info('ai:add', 'stored', { req: traceId, noteId: note.id, type: note.type })
+    logger.info(LOG_TAGS.AI.ADD, 'stored', { req: traceId, noteId: note.id, type: note.type })
     return note
   }
 
@@ -188,7 +189,7 @@ export class AICommandService {
       return extractJSON(out)
     } catch (err) {
       if (signal.aborted) throw err
-      logger.warn('ai:add', 'parse failed → heuristic fallback', { req: traceId, error: (err as Error).message })
+      logger.warn(LOG_TAGS.AI.ADD, 'parse failed → heuristic fallback', { req: traceId, error: (err as Error).message })
       return heuristicParse(raw)
     }
   }
@@ -200,10 +201,10 @@ export class AICommandService {
     signal: AbortSignal,
     traceId: string
   ): Promise<{ matches: Note[]; reasons: Record<string, string> }> {
-    logger.info('ai:delete', 'input', { req: traceId, query: maskSecrets(query) })
+    logger.info(LOG_TAGS.AI.DELETE, 'input', { req: traceId, query: maskSecrets(query) })
 
     const candidates = recallCandidates(query, AI_COMMAND.CANDIDATE_LIMIT)
-    logger.info('ai:delete', 'recall', { req: traceId, count: candidates.length })
+    logger.info(LOG_TAGS.AI.DELETE, 'recall', { req: traceId, count: candidates.length })
     if (candidates.length === 0) return { matches: [], reasons: {} }
 
     const located = await this.locate(query, candidates, signal, traceId, 'delete.locate')
@@ -218,7 +219,7 @@ export class AICommandService {
       }
     }
 
-    logger.info('ai:delete', 'located', {
+    logger.info(LOG_TAGS.AI.DELETE, 'located', {
       req: traceId,
       matches: matches.map((n) => ({ id: n.id, title: maskSecrets(n.title), reason: reasons[n.id] }))
     })
@@ -232,10 +233,10 @@ export class AICommandService {
     signal: AbortSignal,
     traceId: string
   ): Promise<{ target: Note; proposed: EditProposal; summary: string } | null> {
-    logger.info('ai:edit', 'input', { req: traceId, instruction: maskSecrets(instruction) })
+    logger.info(LOG_TAGS.AI.EDIT, 'input', { req: traceId, instruction: maskSecrets(instruction) })
 
     const candidates = recallCandidates(instruction, AI_COMMAND.CANDIDATE_LIMIT)
-    logger.info('ai:edit', 'recall', { req: traceId, count: candidates.length })
+    logger.info(LOG_TAGS.AI.EDIT, 'recall', { req: traceId, count: candidates.length })
     if (candidates.length === 0) return null
 
     // Step 1: pick the single most likely target from snippets.
@@ -243,10 +244,10 @@ export class AICommandService {
     const targetId = located[0]?.id
     const shallow = candidates.find((n) => n.id === targetId)
     if (!shallow) {
-      logger.info('ai:edit', 'no target', { req: traceId, candidates: candidates.length })
+      logger.info(LOG_TAGS.AI.EDIT, 'no target', { req: traceId, candidates: candidates.length })
       return null
     }
-    logger.info('ai:edit', 'target', { req: traceId, noteId: shallow.id, title: maskSecrets(shallow.title) })
+    logger.info(LOG_TAGS.AI.EDIT, 'target', { req: traceId, noteId: shallow.id, title: maskSecrets(shallow.title) })
 
     // Step 2: read full content, propose the edit.
     const target = readNote(shallow.id) ?? shallow
@@ -266,14 +267,14 @@ export class AICommandService {
     })
 
     const parsed = safeJson<{ proposed?: EditProposal; summary?: string }>(raw)
-    if (!parsed) logParseFailure('ai:edit', 'edit.propose', traceId, raw)
+    if (!parsed) logParseFailure(LOG_TAGS.AI.EDIT, 'edit.propose', traceId, raw)
     const proposed = sanitizeProposal(parsed?.proposed)
     if (Object.keys(proposed).length === 0) {
-      logger.info('ai:edit', 'no change proposed', { req: traceId, noteId: target.id })
+      logger.info(LOG_TAGS.AI.EDIT, 'no change proposed', { req: traceId, noteId: target.id })
       return null
     }
 
-    logger.info('ai:edit', 'proposed', {
+    logger.info(LOG_TAGS.AI.EDIT, 'proposed', {
       req: traceId,
       noteId: target.id,
       fields: Object.keys(proposed),
@@ -302,7 +303,7 @@ export class AICommandService {
       label
     })
     const parsed = safeJson<{ matches?: Array<{ i?: number; reason?: string }> }>(raw)
-    if (!parsed) logParseFailure('ai:locate', label, traceId, raw)
+    if (!parsed) logParseFailure(LOG_TAGS.AI.LOCATE, label, traceId, raw)
     const out: Array<{ id: string; reason?: string }> = []
     for (const m of parsed?.matches ?? []) {
       const note = candidates[(m.i ?? 0) - 1]
@@ -326,14 +327,14 @@ export class AICommandService {
       label: 'intent'
     })
     const parsed = safeJson<{ intent?: string; query?: string }>(out)
-    if (!parsed) logParseFailure('ai:intent', 'intent', traceId, out)
+    if (!parsed) logParseFailure(LOG_TAGS.AI.INTENT, 'intent', traceId, out)
     const intent = (['search', 'add', 'delete', 'edit'] as const).includes(
       parsed?.intent as AICommandRequest['type']
     )
       ? (parsed!.intent as AICommandRequest['type'])
       : 'search'
     const query = parsed?.query ?? raw
-    logger.info('ai:intent', 'resolved', { req: traceId, intent, query: maskSecrets(query).slice(0, 200) })
+    logger.info(LOG_TAGS.AI.INTENT, 'resolved', { req: traceId, intent, query: maskSecrets(query).slice(0, 200) })
     return { intent, query }
   }
 }

@@ -2,6 +2,8 @@ import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { getConfigPath } from '../utils/paths'
 import { DEFAULT_CONFIG } from '../../shared/constants'
 import type { AppConfig } from '../../shared/types'
+import { logger } from '../utils/logger'
+import { LOG_TAGS } from '../../shared/logTags'
 
 let config: AppConfig | null = null
 
@@ -19,7 +21,7 @@ export function loadConfig(storagePath: string): AppConfig {
       const parsed = JSON.parse(raw) as Partial<AppConfig>
       config = { ...DEFAULT_CONFIG, ...parsed, storagePath }
     } catch {
-      console.warn('Failed to parse config.json, using defaults')
+      logger.warn(LOG_TAGS.MAIN.THEME, 'Failed to parse config.json, using defaults')
       config = { ...DEFAULT_CONFIG, storagePath }
     }
   } else {
