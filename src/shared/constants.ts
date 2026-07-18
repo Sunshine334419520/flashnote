@@ -134,6 +134,14 @@ export const AI_COMMAND = {
 /** Max chars of AI request/response recorded in logs (previews are masked, then truncated). */
 export const AI_LOG_PREVIEW_LENGTH = 4000
 
+/** Config keys — avoids hardcoded strings throughout the codebase. */
+export const CONFIG_KEYS = {
+  HOTKEY: 'hotkey',
+  THEME: 'theme',
+  LANGUAGE: 'language',
+  ONBOARDING_COMPLETED: 'onboardingCompleted',
+} as const
+
 /** DOM keyCode reported while an IME composition is active (e.g. a pinyin candidate). */
 export const IME_COMPOSING_KEYCODE = 229
 

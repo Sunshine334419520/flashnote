@@ -203,6 +203,14 @@ export const SYNC_PHASES = {
   PULLING: 'pulling',
 } as const
 
+export const CLOUD_STATUS = {
+  DISCONNECTED: 'disconnected',
+  CONNECTING: 'connecting',
+  INITIALIZING: 'initializing',
+  CONNECTED: 'connected',
+  ERROR: 'error',
+} as const
+
 export type SyncPhase = (typeof SYNC_PHASES)[keyof typeof SYNC_PHASES]
 
 export interface SyncProgress {
