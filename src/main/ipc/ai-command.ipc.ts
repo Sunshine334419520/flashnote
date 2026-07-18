@@ -2,6 +2,7 @@ import { ipcMain, webContents } from 'electron'
 import { IPC_CHANNELS } from '../../shared/ipc-channels'
 import { safeHandler } from '../utils/safeHandler'
 import { logger } from '../utils/logger'
+import { LOG_TAGS } from '../../shared/logTags'
 import type { AICommandService } from '../services/ai/command.service'
 import type { AICommandRequest, AICommandConfirmRequest } from '../../shared/types'
 
@@ -21,18 +22,18 @@ export function registerAICommandIpc(commandService: AICommandService): void {
 
   ipcMain.handle(
     IPC_CHANNELS.AI_COMMAND_RUN,
-    safeHandler('ai:command:run', async (_event, req: AICommandRequest) => {
+    safeHandler(IPC_CHANNELS.AI_COMMAND_RUN, async (_event, req: AICommandRequest) => {
       const controller = new AbortController()
       inflight.set(req.id, controller)
       const start = Date.now()
       try {
         const result = await commandService.run(req, controller.signal)
-        logger.info('ai:command', 'done', { id: req.id, kind: result.kind, elapsedMs: Date.now() - start })
+        logger.info(LOG_TAGS.AI.COMMAND, 'done', { id: req.id, kind: result.kind, elapsedMs: Date.now() - start })
         // Only /add mutates during run — surface it to all windows.
         if (result.kind === 'add') broadcast(IPC_CHANNELS.EVENT_NOTE_CREATED, result.note)
         return result
       } catch (err) {
-        logger.warn('ai:command', 'run failed', {
+        logger.warn(LOG_TAGS.AI.COMMAND, 'run failed', {
           id: req.id,
           aborted: controller.signal.aborted,
           elapsedMs: Date.now() - start,
@@ -47,8 +48,8 @@ export function registerAICommandIpc(commandService: AICommandService): void {
 
   ipcMain.handle(
     IPC_CHANNELS.AI_COMMAND_CANCEL,
-    safeHandler('ai:command:cancel', async (_event, requestId: string) => {
-      logger.info('ai:command', 'cancel', { id: requestId, found: inflight.has(requestId) })
+    safeHandler(IPC_CHANNELS.AI_COMMAND_CANCEL, async (_event, requestId: string) => {
+      logger.info(LOG_TAGS.AI.COMMAND, 'cancel', { id: requestId, found: inflight.has(requestId) })
       inflight.get(requestId)?.abort()
       inflight.delete(requestId)
     })
@@ -56,7 +57,7 @@ export function registerAICommandIpc(commandService: AICommandService): void {
 
   ipcMain.handle(
     IPC_CHANNELS.AI_COMMAND_CONFIRM,
-    safeHandler('ai:command:confirm', async (_event, req: AICommandConfirmRequest) => {
+    safeHandler(IPC_CHANNELS.AI_COMMAND_CONFIRM, async (_event, req: AICommandConfirmRequest) => {
       const result = commandService.confirm(req)
       if (req.type === 'delete') {
         for (const id of req.noteIds) broadcast(IPC_CHANNELS.EVENT_NOTE_DELETED, id)

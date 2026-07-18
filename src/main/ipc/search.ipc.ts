@@ -7,7 +7,7 @@ import type { SearchQuery } from '../../shared/types'
 export function registerSearchIpc(): void {
   ipcMain.handle(
     IPC_CHANNELS.SEARCH_QUERY,
-    safeHandler('search:query', async (_event, query: SearchQuery) => {
+    safeHandler(IPC_CHANNELS.SEARCH_QUERY, async (_event, query: SearchQuery) => {
       return getNotes(query)
     })
   )

@@ -8,7 +8,7 @@ import type { CloudServiceType } from '../../shared/types'
 export function registerCloudSyncIpc(cloudSyncService: CloudSyncService): void {
   ipcMain.handle(
     IPC_CHANNELS.CLOUD_CONNECT,
-    safeHandler('cloud:connect', async (_event, service: CloudServiceType) => {
+    safeHandler(IPC_CHANNELS.CLOUD_CONNECT, async (_event, service: CloudServiceType) => {
       const connection = await cloudSyncService.connect(service)
       const authInfo = cloudSyncService.getPendingAuthUrl()
       return {
@@ -20,28 +20,28 @@ export function registerCloudSyncIpc(cloudSyncService: CloudSyncService): void {
 
   ipcMain.handle(
     IPC_CHANNELS.CLOUD_DISCONNECT,
-    safeHandler('cloud:disconnect', async () => {
+    safeHandler(IPC_CHANNELS.CLOUD_DISCONNECT, async () => {
       await cloudSyncService.disconnect()
     })
   )
 
   ipcMain.handle(
     IPC_CHANNELS.CLOUD_GET_STATUS,
-    safeHandler('cloud:get-status', async () => {
+    safeHandler(IPC_CHANNELS.CLOUD_GET_STATUS, async () => {
       return cloudSyncService.getStatus()
     })
   )
 
   ipcMain.handle(
     IPC_CHANNELS.CLOUD_SYNC,
-    safeHandler('cloud:sync', async () => {
+    safeHandler(IPC_CHANNELS.CLOUD_SYNC, async () => {
       return cloudSyncService.syncNow()
     })
   )
 
   ipcMain.handle(
     IPC_CHANNELS.CLOUD_PULL,
-    safeHandler('cloud:pull', async () => {
+    safeHandler(IPC_CHANNELS.CLOUD_PULL, async () => {
       return cloudSyncService.pullAll()
     })
   )

@@ -2,6 +2,7 @@ import { Menu, app } from 'electron'
 import { loadConfig } from './services/config.service'
 import { logger } from './utils/logger'
 import { IS_MAC } from '../shared/constants'
+import { LOG_TAGS } from '../shared/logTags'
 
 // ── i18n for main process ────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ function t(key: string): string {
 
 export function createAppMenu(settingsAction: () => void): void {
   lang = resolveLanguage()
-  logger.info('main:menu', `Language resolved: ${lang}`)
+  logger.info(LOG_TAGS.MAIN.MENU, `Language resolved: ${lang}`)
 
   // Set app name for the macOS menu bar (shows "Electron" otherwise in dev)
   app.setName(lang === 'zh-CN' ? '闪记' : 'FlashNote')

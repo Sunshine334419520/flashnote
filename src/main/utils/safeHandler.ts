@@ -1,4 +1,5 @@
 import { logger } from './logger'
+import { LOG_TAGS } from '../../shared/logTags'
 
 /**
  * Wrap an IPC handler so that any thrown error is logged to file + console.
@@ -14,14 +15,14 @@ export function safeHandler<T extends (...args: any[]) => any>(
       const result = fn(...args)
       if (result instanceof Promise) {
         return result.catch((err: Error) => {
-          logger.error(`ipc:${channel}`, err.message, { stack: err.stack })
+          logger.error(`${LOG_TAGS.MAIN.IPC}:${channel}`, err.message, { stack: err.stack })
           throw new Error(err.message ?? 'IPC error')
         }) as ReturnType<T>
       }
       return result
     } catch (err) {
       const error = err as Error
-      logger.error(`ipc:${channel}`, error.message, { stack: error.stack })
+      logger.error(`${LOG_TAGS.MAIN.IPC}:${channel}`, error.message, { stack: error.stack })
       throw new Error(error.message ?? 'IPC error')
     }
   }

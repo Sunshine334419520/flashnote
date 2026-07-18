@@ -8,12 +8,13 @@ import type { NoteCreateRequest, NoteUpdateRequest, SearchQuery, TaskInfo } from
 import { safeHandler } from '../utils/safeHandler'
 import { logger } from '../utils/logger'
 import { broadcast } from '../utils/broadcast'
+import { LOG_TAGS } from '../../shared/logTags'
 import { heuristicParse } from '../services/ai/base'
 
 export function registerNotesIpc(aiService: AIService, taskManager: TaskManager, cloudSyncService: CloudSyncService): void {
   ipcMain.handle(
     IPC_CHANNELS.NOTE_CREATE,
-    safeHandler('note:create', async (_event, request: NoteCreateRequest) => {
+    safeHandler(IPC_CHANNELS.NOTE_CREATE, async (_event, request: NoteCreateRequest) => {
       // 1. Heuristic parse for immediate classification (no API call)
       const heuristic = heuristicParse(request.content)
 
@@ -41,7 +42,7 @@ export function registerNotesIpc(aiService: AIService, taskManager: TaskManager,
         .parse(request.content)
         .then((parsed) => {
           const elapsed = Date.now() - aiStart
-          logger.info('ai:parse', `AI parse completed in ${elapsed}ms`, {
+          logger.info(LOG_TAGS.AI.PARSE, `AI parse completed in ${elapsed}ms`, {
             category: parsed.category,
             tags: parsed.tags
           })
@@ -72,7 +73,7 @@ export function registerNotesIpc(aiService: AIService, taskManager: TaskManager,
         .catch((err) => {
           const elapsed = Date.now() - aiStart
           const errMsg = (err as Error).message ?? 'Unknown error'
-          logger.warn('ai:parse', `AI parse failed after ${elapsed}ms`, { error: errMsg })
+          logger.warn(LOG_TAGS.AI.PARSE, `AI parse failed after ${elapsed}ms`, { error: errMsg })
 
           // Mark task failed
           const failed = taskManager.markFailed(task.id, errMsg)
@@ -95,7 +96,7 @@ export function registerNotesIpc(aiService: AIService, taskManager: TaskManager,
 
   ipcMain.handle(
     IPC_CHANNELS.NOTE_UPDATE,
-    safeHandler('note:update', async (_event, request: NoteUpdateRequest) => {
+    safeHandler(IPC_CHANNELS.NOTE_UPDATE, async (_event, request: NoteUpdateRequest) => {
       const note = modifyNote(request)
       broadcast(IPC_CHANNELS.EVENT_NOTE_UPDATED, note)
       cloudSyncService.schedulePush(note.id, 'update')
@@ -105,7 +106,7 @@ export function registerNotesIpc(aiService: AIService, taskManager: TaskManager,
 
   ipcMain.handle(
     IPC_CHANNELS.NOTE_DELETE,
-    safeHandler('note:delete', async (_event, id: string) => {
+    safeHandler(IPC_CHANNELS.NOTE_DELETE, async (_event, id: string) => {
       removeNote(id)
       broadcast(IPC_CHANNELS.EVENT_NOTE_DELETED, id)
       cloudSyncService.schedulePush(id, 'delete')
@@ -114,17 +115,17 @@ export function registerNotesIpc(aiService: AIService, taskManager: TaskManager,
 
   ipcMain.handle(
     IPC_CHANNELS.NOTE_GET,
-    safeHandler('note:get', async (_event, id: string) => readNote(id))
+    safeHandler(IPC_CHANNELS.NOTE_GET, async (_event, id: string) => readNote(id))
   )
 
   ipcMain.handle(
     IPC_CHANNELS.NOTE_LIST,
-    safeHandler('note:list', async (_event, query: SearchQuery | undefined) => getNotes(query))
+    safeHandler(IPC_CHANNELS.NOTE_LIST, async (_event, query: SearchQuery | undefined) => getNotes(query))
   )
 
   // Task listing
   ipcMain.handle(
     IPC_CHANNELS.TASK_LIST,
-    safeHandler('task:list', async () => taskManager.listTasks())
+    safeHandler(IPC_CHANNELS.TASK_LIST, async () => taskManager.listTasks())
   )
 }
