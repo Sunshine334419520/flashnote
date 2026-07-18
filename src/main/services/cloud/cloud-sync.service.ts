@@ -3,11 +3,11 @@ import { getDatabase } from '../../database/connection'
 import { broadcast } from '../../utils/broadcast'
 import { logger } from '../../utils/logger'
 import {
-  NOTION_CLIENT_ID,
-  NOTION_CLIENT_SECRET,
-  NOTION_REDIRECT_PORT
+  NOTION_REDIRECT_PORT,
+  ONENOTE_REDIRECT_PORT
 } from '../../../shared/constants'
-import type { CloudConnection, SyncProgress, SyncResult, CloudServiceType } from '../../../shared/types'
+import { SYNC_PHASES } from '../../../shared/types'
+import type { CloudConnection, SyncProgress, SyncResult, CloudServiceType, SyncPhase } from '../../../shared/types'
 import { IPC_CHANNELS } from '../../../shared/ipc-channels'
 import type { CloudConnectionRow } from '../../database/schema'
 import { OAuthServer } from './auth-server'
@@ -75,6 +75,13 @@ export class CloudSyncService {
     //    clean slate (no stale remote-delete detection, no version skew).
     await this.disconnect()
 
+    // 0.3. Stop any previous pending auth server (e.g. user closed browser
+    //    without completing OAuth last time, leaving port occupied).
+    if (this.pendingAuth) {
+      await this.pendingAuth.server.stop()
+      this.pendingAuth = null
+    }
+
     // 0.5. Select the right adapter for this service
     this.adapter = this.adapterFor(service)
     this.syncEngine = new SyncEngine(this.adapter)
@@ -82,8 +89,9 @@ export class CloudSyncService {
     const authServer = new OAuthServer()
 
     try {
-      // 1. Start local HTTP server on a random port
-      const { port } = await authServer.start()
+      // 1. Start local HTTP server on the correct port for this service
+      const oauthPort = service === 'onenote' ? ONENOTE_REDIRECT_PORT : NOTION_REDIRECT_PORT
+      const { port } = await authServer.start(oauthPort)
       const redirectUri = `http://localhost:${port}/callback`
 
       // 2. Build auth URL
@@ -126,6 +134,7 @@ export class CloudSyncService {
 
       // 5. Store pending auth state + start background wait for callback
       this.pendingAuth = { server: authServer, state, redirectUri, tempId, authUrl, service }
+      logger.info('cloud:service', 'connect: pendingAuth set', { tempId, service })
 
       // Fire-and-forget: wait for the browser callback, then complete auth
       authServer.waitForCallback()
@@ -155,79 +164,97 @@ export class CloudSyncService {
    * Called internally when the OAuth server receives the callback.
    */
   private async completeAuth(code: string): Promise<void> {
+    logger.info('cloud:service', 'completeAuth: called', { hasPending: !!this.pendingAuth })
+
     const pending = this.pendingAuth
-    if (!pending) return
+    if (!pending) {
+      logger.error('cloud:service', 'completeAuth: NO PENDING AUTH — callback arrived but state was lost')
+      return
+    }
 
     this.pendingAuth = null
     const { server, redirectUri, tempId, service } = pending
+    logger.info('cloud:service', 'completeAuth: start', { service, tempId })
 
     try {
-      // Exchange code for token
+      // 1. Exchange code for token
+      logger.info('cloud:service', 'completeAuth: exchanging code...')
       const authResult = await this.adapter!.exchangeCode(code, redirectUri)
+      logger.info('cloud:service', 'completeAuth: token obtained')
 
-      // Ensure database exists
-      const dbInfo = await this.adapter!.ensureDatabase(authResult.accessToken)
+      // Stop server in background — don't await. server.close()
+      // waits for HTTP keep-alive connections which can hang.
+      server.stop().catch(() => { /* ignore */ })
 
+      // 2. Save as 'initializing' — broadcast immediately so UI updates
+      logger.info('cloud:service', 'completeAuth: saving initializing...')
       const now = new Date().toISOString()
-      const connRow: CloudConnectionRow = {
-        id: tempId,
-        service,
+      this.upsertConnection({
+        id: tempId, service,
         access_token: authResult.accessToken,
-        workspace_id: authResult.workspaceId,
-        workspace_name: authResult.workspaceName,
-        account_name: authResult.accountName ?? null,
-        account_email: authResult.accountEmail ?? null,
-        database_id: dbInfo.id,
-        database_url: dbInfo.url,
-        last_sync_at: null,
+        workspace_id: authResult.workspaceId, workspace_name: authResult.workspaceName,
+        account_name: authResult.accountName ?? null, account_email: authResult.accountEmail ?? null,
+        database_id: null, database_url: null, last_sync_at: null,
         refresh_token: authResult.refreshToken ?? null,
         token_expires_at: authResult.expiresAt ? String(authResult.expiresAt) : null,
-        status: 'connected',
-        error: null,
-        created_at: now,
-        updated_at: now
-      }
+        status: 'initializing', error: null, created_at: now, updated_at: now
+      })
+      logger.info('cloud:service', 'completeAuth: saved, broadcasting initializing...')
+      const initConn = this.getConnection(tempId)
+      logger.info('cloud:service', 'completeAuth: getConnection returned', { hasConn: !!initConn, status: initConn?.status })
+      broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, initConn)
+      logger.info('cloud:service', 'completeAuth: broadcast done, status → initializing')
 
-      this.upsertConnection(connRow)
+      // 3. Init remote + initial sync. AWAITED — guarantees database_id
+      //    is set before 'connected'. B machine finds A's existing DB here.
+      logger.info('cloud:service', 'completeAuth: calling initRemote...')
+      await this.initRemote(tempId, authResult.accessToken)
+      logger.info('cloud:service', 'completeAuth: initRemote done')
 
-      const connection = this.rowToConnection(connRow)
-      broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, connection)
-
-      // Full upload — run async, don't block status update
-      try {
-        const conn = this.getActiveConnection()
-        if (conn) {
-          const result = await this.syncEngine!.syncAll({
-            accessToken: conn.access_token,
-            databaseId: conn.database_id!
-          })
-          logger.info('cloud:service', 'Initial full upload complete', {
-            pushed: result.pushed,
-            errors: result.errors.length
-          })
-          // Update last_sync_at
-          this.updateLastSync(conn.id)
-        }
-      } catch (err) {
-        logger.error('cloud:service', 'Initial full upload failed', { error: String(err) })
-      }
-
-      // Start polling
+      // 4. All ready
+      logger.info('cloud:service', 'completeAuth: marking connected...')
+      this.updateConnectionStatus(tempId, 'connected')
+      broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
+      logger.info('cloud:service', 'completeAuth: status → connected, broadcast done')
       this.startPolling()
-
-      await server.stop()
+      logger.info('cloud:service', 'completeAuth: polling started, DONE')
     } catch (err) {
-      logger.error('cloud:service', 'Auth completion failed', { error: String(err) })
-
-      // Mark connection as error
-      const errorMsg = (err as Error).message
-      this.updateConnectionStatus(tempId, 'error', errorMsg)
-
-      const conn = this.getConnection(tempId)
-      broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, conn)
-
-      await server.stop()
+      logger.error('cloud:service', 'completeAuth: FAILED', { error: String(err) })
+      this.updateConnectionStatus(tempId, 'error', String(err))
+      broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getConnection(tempId))
+      server.stop().catch(() => { /* ignore */ })
     }
+  }
+
+  /**
+   * Initialize the remote side: find or create the cloud database,
+   * run initial sync. After this, the connection is ready for normal sync.
+   * Also used by ensureFreshToken to recover a missing database_id.
+   */
+  async initRemote(connId: string, accessToken: string): Promise<void> {
+    logger.info('cloud:service', 'initRemote: start')
+    this.broadcastProgress(SYNC_PHASES.COMPARING, 0, 0)
+
+    logger.info('cloud:service', 'initRemote: calling ensureDatabase...')
+    const dbInfo = await this.adapter!.ensureDatabase(accessToken)
+    logger.info('cloud:service', 'initRemote: db ready', { id: dbInfo.id })
+
+    const db = getDatabase()
+    db.prepare(
+      "UPDATE cloud_connections SET database_id = ?, database_url = ?, updated_at = datetime('now') WHERE id = ?"
+    ).run(dbInfo.id, dbInfo.url, connId)
+    logger.info('cloud:service', 'initRemote: database_id saved')
+
+    logger.info('cloud:service', 'initRemote: running sync...')
+    const result = await this.syncEngine!.syncAll({
+      accessToken,
+      databaseId: dbInfo.id
+    })
+    logger.info('cloud:service', 'initRemote: sync done', {
+      pushed: result.pushed, pulled: result.pulled, errors: result.errors.length
+    })
+
+    this.updateLastSync(connId)
   }
 
   /**
@@ -243,17 +270,25 @@ export class CloudSyncService {
     this.stopPolling()
     this.clearPushQueue()
 
+    // Stop any pending OAuth auth server (port cleanup)
+    if (this.pendingAuth) {
+      logger.info('cloud:service', 'disconnect: clearing pendingAuth')
+      this.pendingAuth.server.stop()
+      this.pendingAuth = null
+    }
+
     const db = getDatabase()
 
     // Reset all notes' baseRev to 0 — old remote version numbers are
     // meaningless after switching to a different cloud service.
     db.prepare('UPDATE notes SET base_rev = 0').run()
 
-    const conn = this.getActiveConnection()
-    if (conn) {
-      db.prepare('DELETE FROM cloud_connections WHERE id = ?').run(conn.id)
-      broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, null)
-    }
+    // Delete ALL cloud connection rows (connected / error / connecting).
+    // Only filtering for 'connected' would leave stale rows behind when
+    // the user disconnects after a failed OAuth.
+    db.prepare('DELETE FROM cloud_connections').run()
+
+    broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, null)
   }
 
   /** Get the current connection status (or null if not connected). */
@@ -272,61 +307,82 @@ export class CloudSyncService {
    * For Notion (non-expiring), just return the stored token.
    */
   private async ensureFreshToken(): Promise<ConnectionConfig> {
-    const conn = this.getActiveConnection()
+    let conn = this.getActiveConnection()
     if (!conn || conn.status !== 'connected') {
       throw new Error('Not connected to cloud')
     }
 
-    // Notion: no refresh_token → token is long-lived. Return as-is.
+    // If database_id is missing (e.g. app crashed before initRemote finished,
+    // or B machine connects to an A-machine-created database), recover by
+    // searching the remote side for the existing database.
+    if (!conn.database_id) {
+      logger.info('cloud:service', 'database_id missing — searching remote for existing database')
+      await this.recoverDatabase(conn)
+      conn = this.getActiveConnection()
+      if (!conn?.database_id) {
+        throw new Error('Cloud database not found — the remote database may have been deleted. Try reconnecting.')
+      }
+    }
+
+    return this.resolveToken(conn)
+  }
+
+  /** Return token config, refreshing if needed (OneNote). */
+  private async resolveToken(conn: CloudConnectionRow): Promise<ConnectionConfig> {
+    // Notion: no refresh_token → token is long-lived.
     if (!conn.refresh_token) {
       return { accessToken: conn.access_token, databaseId: conn.database_id! }
     }
 
     // OneNote: check expiry, refresh if near
     const expiresAt = conn.token_expires_at ? Number(conn.token_expires_at) : 0
-    const now = Date.now()
-    const refreshBuffer = 5 * 60 * 1000 // 5 minutes
-
-    if (now + refreshBuffer < expiresAt) {
-      // Token still fresh
+    if (Date.now() + 5 * 60 * 1000 < expiresAt) {
       return { accessToken: conn.access_token, databaseId: conn.database_id! }
     }
 
-    // Token expired or near expiry — refresh
     if (!this.adapter?.refreshAccessToken) {
-      logger.warn('cloud:service', 'Token expired but adapter has no refreshAccessToken')
       return { accessToken: conn.access_token, databaseId: conn.database_id! }
     }
 
     try {
       logger.info('cloud:service', 'Refreshing access token')
       const fresh = await this.adapter.refreshAccessToken(conn.refresh_token)
-
-      // Update connection row with fresh tokens
       const db = getDatabase()
       db.prepare(
         `UPDATE cloud_connections SET access_token = ?, refresh_token = ?,
           token_expires_at = ?, updated_at = datetime('now') WHERE id = ?`
-      ).run(
-        fresh.accessToken,
-        fresh.refreshToken ?? null,
-        fresh.expiresAt ? String(fresh.expiresAt) : null,
-        conn.id
-      )
-
+      ).run(fresh.accessToken, fresh.refreshToken ?? null, fresh.expiresAt ? String(fresh.expiresAt) : null, conn.id)
       return { accessToken: fresh.accessToken, databaseId: conn.database_id! }
     } catch (err) {
       logger.error('cloud:service', 'Token refresh failed', { error: String(err) })
-      // Return stale token — next sync will naturally fail with 401
       return { accessToken: conn.access_token, databaseId: conn.database_id! }
     }
+  }
+
+  /**
+   * Recover a missing database_id by searching the remote service for the
+   * existing database (created by another machine or a previous session).
+   * This handles the B-machine scenario: A created the database, B just
+   * needs to find it and link up.
+   */
+  private async recoverDatabase(conn: CloudConnectionRow): Promise<void> {
+    const service = conn.service as CloudServiceType
+
+    if (!this.adapter) {
+      this.adapter = this.adapterFor(service)
+      this.syncEngine = new SyncEngine(this.adapter)
+    }
+
+    // Reuse initRemote logic: it searches for existing DB and syncs
+    await this.initRemote(conn.id, conn.access_token)
+    logger.info('cloud:service', `Recovered database`)
   }
 
   /** Manual full sync. */
   async syncNow(): Promise<SyncResult> {
     const config = await this.ensureFreshToken()
 
-    this.broadcastProgress('comparing', 0, 0)
+    this.broadcastProgress(SYNC_PHASES.COMPARING, 0, 0)
     const startedAt = Date.now()
 
     const result = await this.syncEngine!.syncAll(config)
@@ -344,13 +400,13 @@ export class CloudSyncService {
   async pullAll(): Promise<{ imported: number }> {
     const config = await this.ensureFreshToken()
 
-    this.broadcastProgress('pulling', 0, 0)
+    this.broadcastProgress(SYNC_PHASES.PULLING, 0, 0)
 
     const result = await this.syncEngine!.pullAll(config)
 
     const conn = this.getActiveConnection()
     if (conn) this.updateLastSync(conn.id)
-    this.broadcastProgress('idle', 0, 0)
+    this.broadcastProgress(SYNC_PHASES.IDLE, 0, 0)
 
     return result
   }
@@ -393,7 +449,7 @@ export class CloudSyncService {
     const queue = new Map(this.pushQueue)
     this.pushQueue.clear()
 
-    this.broadcastProgress('pushing', 0, queue.size)
+    this.broadcastProgress(SYNC_PHASES.PUSHING, 0, queue.size)
 
     let done = 0
     for (const [noteId, action] of queue) {
@@ -407,12 +463,12 @@ export class CloudSyncService {
         logger.error('cloud:service', `Auto-sync failed for ${noteId}`, { error: String(err) })
       }
       done++
-      this.broadcastProgress('pushing', done, queue.size)
+      this.broadcastProgress(SYNC_PHASES.PUSHING, done, queue.size)
     }
 
     const conn = this.getActiveConnection()
     if (conn) this.updateLastSync(conn.id)
-    this.broadcastProgress('idle', 0, 0)
+    this.broadcastProgress(SYNC_PHASES.IDLE, 0, 0)
     broadcast(IPC_CHANNELS.EVENT_CLOUD_STATUS_CHANGED, this.getStatus())
   }
 
@@ -460,7 +516,7 @@ export class CloudSyncService {
     }
 
     logger.info('cloud:service', 'Poll sync started')
-    this.broadcastProgress('comparing', 0, 0)
+    this.broadcastProgress(SYNC_PHASES.COMPARING, 0, 0)
     const startedAt = Date.now()
 
     const conn = this.getActiveConnection()
@@ -481,7 +537,7 @@ export class CloudSyncService {
     const elapsed = Date.now() - startedAt
     const delay = Math.max(0, 1000 - elapsed)
     const finish = () => {
-      this.broadcastProgress('idle', 0, 0)
+      this.broadcastProgress(SYNC_PHASES.IDLE, 0, 0)
       after?.()
     }
     if (delay > 0) {
@@ -518,8 +574,7 @@ export class CloudSyncService {
    */
   getPendingAuthUrl(): { authUrl: string; port: number } | null {
     if (!this.pendingAuth) return null
-    const authUrl = this.adapter!.getAuthUrl(this.pendingAuth.state, this.pendingAuth.redirectUri)
-    return { authUrl, port: this.pendingAuth.server['port'] ?? NOTION_REDIRECT_PORT }
+    return { authUrl: this.pendingAuth.authUrl, port: this.pendingAuth.server['port'] ?? 0 }
   }
 
   // ==========================================================
@@ -608,7 +663,7 @@ export class CloudSyncService {
   // Helpers
   // ==========================================================
 
-  private broadcastProgress(phase: SyncProgress['phase'], current: number, total: number): void {
+  private broadcastProgress(phase: SyncPhase, current: number, total: number): void {
     broadcast(IPC_CHANNELS.EVENT_CLOUD_SYNC_PROGRESS, { phase, current, total })
   }
 }

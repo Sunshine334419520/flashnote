@@ -31,7 +31,7 @@ export class OAuthServer {
       }
 
       self.server.on('error', onError)
-      self.server.listen(preferredPort, '127.0.0.1', () => {
+      self.server.listen(preferredPort, () => {
         setPort(self.server!.address())
       })
 
@@ -50,8 +50,14 @@ export class OAuthServer {
   /** Wait for the OAuth callback. Times out after `timeoutMs` (default 5 min). */
   waitForCallback(timeoutMs = 300_000): Promise<{ code: string; state: string }> {
     return new Promise((resolve, reject) => {
-      this.resolveCallback = resolve
-      this.rejectCallback = reject
+      this.resolveCallback = (result) => {
+        logger.info('cloud:auth-server', '[waitForCallback] resolved', { code: result.code.substring(0, 8) + '...' })
+        resolve(result)
+      }
+      this.rejectCallback = (err) => {
+        logger.info('cloud:auth-server', '[waitForCallback] rejected', { error: String(err) })
+        reject(err)
+      }
 
       this.timeout = setTimeout(() => {
         this.cleanup()
@@ -78,9 +84,15 @@ export class OAuthServer {
   // ── private ──────────────────────────────────────────────
 
   private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+    try {
+      logger.info('cloud:auth-server', `[request] ${req.method} ${req.url}`)
+    } catch { /* logger error, ignore */ }
+
+    try {
     const url = new URL(req.url ?? '/', `http://localhost:${this.port}`)
 
     if (url.pathname === '/callback') {
+      try { logger.info('cloud:auth-server', '[callback] received') } catch { /* */ }
       const code = url.searchParams.get('code')
       const state = url.searchParams.get('state')
       const error = url.searchParams.get('error')
@@ -108,6 +120,11 @@ export class OAuthServer {
       res.writeHead(404)
       res.end('Not found')
     }
+    } catch (err) {
+      try { logger.error('cloud:auth-server', 'handleRequest crashed', { error: String(err) }) } catch { /* */ }
+      res.writeHead(500)
+      res.end('Internal error')
+    }
   }
 
   private sendHTML(res: http.ServerResponse, success: boolean, message: string): void {
@@ -126,6 +143,7 @@ export class OAuthServer {
   </div>
 </body>
 </html>`
+    res.setHeader('Connection', 'close')
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
     res.end(html)
   }

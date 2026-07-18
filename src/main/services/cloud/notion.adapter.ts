@@ -107,7 +107,18 @@ export class NotionAdapter implements CloudSyncAdapter {
 
   async exchangeCode(code: string, redirectUri: string): Promise<AuthResult> {
     const auth = Buffer.from(`${NOTION_CLIENT_ID}:${NOTION_CLIENT_SECRET}`).toString('base64')
+    const clientIdPrefix = NOTION_CLIENT_ID.substring(0, 8)
 
+    logger.info('cloud:notion', `exchangeCode: POST ${NOTION_TOKEN_URL}`, { clientId: clientIdPrefix + '...', redirectUri, codePrefix: code.substring(0, 8) + '...' })
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => {
+      logger.warn('cloud:notion', 'exchangeCode: 30s timeout — aborting fetch')
+      controller.abort()
+    }, 30_000)
+
+    try {
+    const startedAt = Date.now()
     const res = await fetch(NOTION_TOKEN_URL, {
       method: 'POST',
       headers: {
@@ -119,11 +130,14 @@ export class NotionAdapter implements CloudSyncAdapter {
         grant_type: 'authorization_code',
         code,
         redirect_uri: redirectUri
-      })
+      }),
+      signal: controller.signal
     })
+    logger.info('cloud:notion', `exchangeCode: response ${res.status}`, { elapsed: Date.now() - startedAt })
 
     if (!res.ok) {
       const text = await res.text()
+      logger.error('cloud:notion', 'exchangeCode: token endpoint returned error', { status: res.status, body: text.substring(0, 200) })
       throw new Error(`Notion token exchange failed (${res.status}): ${text}`)
     }
 
@@ -140,6 +154,13 @@ export class NotionAdapter implements CloudSyncAdapter {
       workspaceName: data.workspace_name,
       accountName: data.owner?.user?.name,
       accountEmail: data.owner?.user?.person?.email
+    }
+    } catch (err) {
+      const name = (err as Error).name
+      logger.error('cloud:notion', 'exchangeCode: fetch failed', { errorName: name, error: String(err) })
+      throw err
+    } finally {
+      clearTimeout(timeout)
     }
   }
 

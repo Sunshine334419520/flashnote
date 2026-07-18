@@ -2,6 +2,8 @@ import { type ReactElement, useEffect, useState, useCallback, useRef } from 'rea
 import { useNoteStore } from '../stores/noteStore'
 import { useStatusBarStore } from '../stores/statusBarStore'
 import { useCloudSyncStore } from '../stores/cloudSyncStore'
+import { SYNC_PHASES } from '../../shared/types'
+import { OnboardingView } from './OnboardingView'
 import { CommandInput } from '../components/command/CommandInput'
 import type { AICommand } from '../components/command/CommandInput'
 import { CommandResultPanel } from '../components/command/CommandResultPanel'
@@ -27,7 +29,18 @@ export function MainView(): ReactElement {
   const deleteNote = useNoteStore((s) => s.deleteNote)
   const { t } = useT()
 
-  // Status bar
+  // ── Onboarding phase ───────────────────────────────────────
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingChecked, setOnboardingChecked] = useState(false)
+
+  useEffect(() => {
+    window.electronAPI.settings.get('onboardingCompleted').then((completed) => {
+      if (!completed) setShowOnboarding(true)
+      setOnboardingChecked(true)
+    }).catch(() => setOnboardingChecked(true))
+  }, [])
+
+  // ── Status bar
   const failedCount = useStatusBarStore((s) => s.getFailedCount())
   const cloudConnection = useCloudSyncStore((s) => s.connection)
   const cloudSyncProgress = useCloudSyncStore((s) => s.syncProgress)
@@ -37,7 +50,7 @@ export function MainView(): ReactElement {
     if (!cloudConnection || cloudConnection.status === 'disconnected') {
       return <Cloud size={14} className="text-muted-foreground/30" />
     }
-    if (cloudConnection.status === 'connecting' || (cloudSyncProgress && cloudSyncProgress.phase !== 'idle')) {
+    if (cloudConnection.status === 'connecting' || (cloudSyncProgress && cloudSyncProgress.phase !== SYNC_PHASES.IDLE)) {
       return <RefreshCw size={14} className="text-blue-500 animate-spin" />
     }
     if (cloudConnection.status === 'error') {
@@ -241,8 +254,19 @@ export function MainView(): ReactElement {
     deleteNote(id).catch((err) => console.error('Failed to delete note:', err))
   }, [deleteNote])
 
+  // ── Main UI (onboarding overlays if needed) ──────────────
+
+  // Don't render anything until we know whether to show onboarding.
+  // This prevents a flash of the main UI before the modal appears.
+  if (!onboardingChecked) return <></>
+
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <>
+      {showOnboarding && (
+        <OnboardingView onComplete={() => setShowOnboarding(false)} />
+      )}
+
+      <div className="h-screen flex flex-col bg-background">
       {/* AI Command Bar — draggable region on macOS hiddenInset */}
       <div className="shrink-0 px-24 pt-[46px] pb-[6px] drag-region">
         <div className="no-drag flex items-start gap-3">
@@ -323,5 +347,6 @@ export function MainView(): ReactElement {
         </StatusBarItem>
       </StatusBar>
     </div>
+    </>
   )
 }

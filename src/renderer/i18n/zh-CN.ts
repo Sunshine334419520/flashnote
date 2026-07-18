@@ -157,9 +157,10 @@ const zhCN = {
 
   // Cloud sync
   'statusbar.cloud': '云同步',
-  'cloud.title': '云同步',
-  'cloud.subtitle': '连接 Notion 以启用多端同步',
-  'cloud.connect': '连接 Notion',
+  'cloud.title': '连接云端',
+  'cloud.subtitle': '连接云端，开启跨设备同步',
+  'cloud.connect': '连接',
+  'cloud.selectService': '选择云服务',
   'cloud.connecting': '连接中...',
   'cloud.connected': '已连接',
   'cloud.disconnected': '未连接',
@@ -180,6 +181,7 @@ const zhCN = {
   'cloud.feishu': '飞书',
   'cloud.feishuComingSoon': '飞书多维表格支持即将上线',
   'cloud.onenote': 'OneNote',
+  'cloud.notionHint': '连接到 Notion 数据库进行同步',
   'cloud.onenoteHint': '通过 Microsoft Graph 连接到你的 OneNote 笔记本',
   'cloud.connectGeneric': '连接',
   'cloud.recentSync': '同步完成',
@@ -187,6 +189,24 @@ const zhCN = {
   'cloud.phase.comparing': '正在比较...',
   'cloud.phase.pushing': '正在推送...',
   'cloud.phase.pulling': '正在拉取...',
+
+  // Onboarding
+  'onboarding.step1': 'AI 配置',
+  'onboarding.step2': '云同步',
+  'onboarding.step3': '确认',
+  'onboarding.skip': '跳过',
+  'onboarding.next': '下一步',
+  'onboarding.back': '上一步',
+  'onboarding.finish': '完成，开始使用',
+  'onboarding.summary.ai': 'AI 服务',
+  'onboarding.summary.cloud': '云同步',
+  'onboarding.summary.hotkey': '快捷键',
+  'onboarding.summary.skipped': '已跳过',
+  'onboarding.summary.none': '未配置',
+  'onboarding.desc.ai': '配置 AI 服务以解锁智能内容解析',
+  'onboarding.desc.cloud': '连接云端，开启跨设备无缝同步',
+  'onboarding.desc.confirm': '确认你的设置，准备开始使用',
+  'onboarding.advancing': '即将进入下一步',
 }
 
 export default zhCN

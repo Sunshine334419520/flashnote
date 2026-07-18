@@ -104,6 +104,8 @@ export class SyncEngine {
     }
 
     // 3. Index
+    logger.info('cloud:sync', `Comparing: ${localNotes.length} local, ${remoteNotes.length} remote`)
+
     const localMap = new Map<string, Note>()
     for (const n of localNotes) localMap.set(n.id, n)
 
@@ -180,6 +182,7 @@ export class SyncEngine {
             await this.adapter.createNote(conn.accessToken, conn.databaseId, SyncEngine.toSyncPayload(local))
             this.updateBaseRev(local.id, local.syncRev)
             result.pushed++
+            logger.info('cloud:sync', `Pushed new: "${local.title}"`, { noteId: local.id, syncRev: local.syncRev })
           } catch (err) {
             result.errors.push(`push ${local.id}: ${String(err)}`)
           }
@@ -206,7 +209,7 @@ export class SyncEngine {
       }
     }
 
-    logger.info('cloud:sync', `Sync done: +${result.pushed} -${result.pulled} =${result.skipped}`, {
+    logger.info('cloud:sync', `Sync done: +${result.pushed} -${result.pulled} =${result.skipped} (${localNotes.length}L/${remoteNotes.length}R)`, {
       errors: result.errors.length
     })
 

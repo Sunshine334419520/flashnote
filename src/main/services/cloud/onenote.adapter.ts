@@ -318,7 +318,15 @@ export class OnenoteAdapter implements CloudSyncAdapter {
 
     for (const page of pages.value) {
       try {
-        const html = (await graphGet(accessToken, `/me/onenote/pages/${page.id}/content`)) as string
+        // OneNote /content endpoint returns HTML, not JSON — fetch as text
+        const res = await fetch(`${GRAPH}/me/onenote/pages/${page.id}/content`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        })
+        if (!res.ok) {
+          logger.warn('cloud:onenote', `Failed to fetch page content ${page.id} (${res.status})`)
+          continue
+        }
+        const html = await res.text()
         const parsed = parseMetaFromHtml(html)
         if (!parsed) continue
 
@@ -356,9 +364,11 @@ export class OnenoteAdapter implements CloudSyncAdapter {
     const meta = JSON.parse(note.meta) as NoteMeta
     const htmlBody = mdToHtml(note.content)
     const pageHtml = [
+      '<!DOCTYPE html>',
       '<html>',
       '<head>',
       `<title>${escapeHtml(note.title)}</title>`,
+      '<meta charset="utf-8" />',
       '</head>',
       '<body>',
       htmlBody,

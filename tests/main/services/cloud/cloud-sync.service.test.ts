@@ -104,11 +104,14 @@ describe('CloudSyncService', () => {
 
   describe('connect', () => {
     it('throws for unsupported service', async () => {
-      await expect(new CloudSyncService().connect('feishu' as any)).rejects.toThrow('Unsupported service')
+      await expect(new CloudSyncService().connect('feishu' as any)).rejects.toThrow('Unsupported cloud service: feishu')
     })
 
-    it('throws when OAuth not configured', async () => {
-      await expect(new CloudSyncService().connect('notion' as any)).rejects.toThrow('OAuth credentials not configured')
+    it('returns connecting status immediately (OAuth is async)', async () => {
+      const result = await new CloudSyncService().connect('notion')
+      expect(result.status).toBe('connecting')
+      expect(result.service).toBe('notion')
+      expect(result.id).toBeTruthy()
     })
   })
 

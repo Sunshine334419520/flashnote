@@ -4,6 +4,7 @@ import { useCloudSyncStore } from '../../../stores/cloudSyncStore'
 import { useFormatTime } from '../../../hooks/useFormatTime'
 import { useT } from '../../../i18n'
 import { cn } from '../../../lib/cn'
+import { SYNC_PHASES } from '../../../../shared/types'
 
 export function CloudSyncPanel(): ReactElement {
   const connection = useCloudSyncStore((s) => s.connection)
@@ -12,7 +13,7 @@ export function CloudSyncPanel(): ReactElement {
   const formatTime = useFormatTime()
   const { t } = useT()
 
-  const isSyncing = syncProgress != null && syncProgress.phase !== 'idle'
+  const isSyncing = syncProgress != null && syncProgress.phase !== SYNC_PHASES.IDLE
 
   // ── Disconnected ──────────────────────────────────────────
   if (!connection || connection.status === 'disconnected') {

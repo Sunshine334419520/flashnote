@@ -175,6 +175,7 @@ export interface AppConfig {
   theme: 'light' | 'dark' | 'system'
   language: 'zh-CN' | 'en' | 'system'
   windowBounds?: { x: number; y: number; width: number; height: number }
+  onboardingCompleted: boolean
 }
 
 // ============================================================
@@ -186,7 +187,7 @@ export type CloudServiceType = 'notion' | 'feishu' | 'onenote'
 export interface CloudConnection {
   id: string
   service: CloudServiceType
-  status: 'disconnected' | 'connecting' | 'connected' | 'error'
+  status: 'disconnected' | 'connecting' | 'initializing' | 'connected' | 'error'
   workspaceName?: string
   accountEmail?: string
   databaseUrl?: string
@@ -195,8 +196,17 @@ export interface CloudConnection {
   createdAt: string
 }
 
+export const SYNC_PHASES = {
+  IDLE: 'idle',
+  COMPARING: 'comparing',
+  PUSHING: 'pushing',
+  PULLING: 'pulling',
+} as const
+
+export type SyncPhase = (typeof SYNC_PHASES)[keyof typeof SYNC_PHASES]
+
 export interface SyncProgress {
-  phase: 'idle' | 'pushing' | 'pulling' | 'comparing'
+  phase: SyncPhase
   current: number
   total: number
 }

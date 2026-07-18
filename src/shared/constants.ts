@@ -141,7 +141,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   storagePath: '', // resolved at runtime
   hotkey: DEFAULT_HOTKEY,
   theme: 'system',
-  language: 'system'
+  language: 'system',
+  onboardingCompleted: false
 }
 
 // ============================================================
@@ -152,6 +153,18 @@ export type ProviderPreset = Omit<AIProviderConfig, 'id' | 'apiKey' | 'name' | '
 
 export const BUILTIN_PROVIDER_PRESETS: ProviderPreset[] = [
   {
+    type: 'deepseek',
+    baseURL: 'https://api.deepseek.com/v1',
+    model: 'deepseek-v4-flash',
+    maxTokens: 300
+  },
+  {
+    type: 'moonshot',
+    baseURL: 'https://api.moonshot.cn/v1',
+    model: 'kimi-k3',
+    maxTokens: 300
+  },
+  {
     type: 'anthropic',
     baseURL: 'https://api.anthropic.com',
     model: 'claude-haiku-4-5',
@@ -160,25 +173,13 @@ export const BUILTIN_PROVIDER_PRESETS: ProviderPreset[] = [
   {
     type: 'openai',
     baseURL: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
-    maxTokens: 300
-  },
-  {
-    type: 'deepseek',
-    baseURL: 'https://api.deepseek.com/v1',
-    model: 'deepseek-chat',
-    maxTokens: 300
-  },
-  {
-    type: 'moonshot',
-    baseURL: 'https://api.moonshot.cn/v1',
-    model: 'moonshot-v1-8k',
+    model: 'gpt-5.4-mini',
     maxTokens: 300
   },
   {
     type: 'zhipu',
     baseURL: 'https://open.bigmodel.cn/api/paas/v4',
-    model: 'glm-4-flash',
+    model: 'glm-4.7-flash',
     maxTokens: 300
   }
 ]
