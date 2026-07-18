@@ -143,6 +143,8 @@ export interface AIOperationRecord {
   error?: string
   duration: number
   createdAt: string
+  promptTokens?: number
+  completionTokens?: number
 }
 
 // ============================================================

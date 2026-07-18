@@ -61,10 +61,10 @@ function windowFrameOptions(): { frame?: boolean; titleBarStyle?: 'hiddenInset' 
 
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 780,
-    height: 690,
-    minWidth: 780,
-    minHeight: 690,
+    width: 700,
+    height: 725,
+    minWidth: 700,
+    minHeight: 725,
     backgroundColor: getThemeBackgroundColor(),
     icon: nativeImage.createFromPath(ICONS.dock),
     ...windowFrameOptions(),
@@ -101,7 +101,7 @@ function createMainWindow(): void {
 function createQuickCaptureWindow(): void {
   quickCaptureWindow = new BrowserWindow({
     width: 680,
-    height: 90,
+    height: 100,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
@@ -214,7 +214,11 @@ let currentHotkey = DEFAULT_HOTKEY
 
 function registerGlobalShortcut(hotkey: string): boolean {
   const registered = globalShortcut.register(hotkey, () => {
-    showQuickCaptureWindow()
+    if (quickCaptureWindow?.isVisible()) {
+      hideQuickCaptureWindow()
+    } else {
+      showQuickCaptureWindow()
+    }
   })
 
   if (!registered) {

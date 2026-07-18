@@ -6,7 +6,7 @@ interface Props {
 
 export function StatusBar({ children }: Props): ReactElement {
   return (
-    <div className="shrink-0 h-8 flex items-center border-t border-border/40 bg-background/80 backdrop-blur-sm overflow-visible pl-2">
+    <div className="shrink-0 h-10 flex items-center border-t border-border/40 bg-background/80 backdrop-blur-sm overflow-visible pl-2">
       {children}
       <div className="flex-1" />
       <span className="text-micro text-muted-foreground/25 pr-3 select-none">v{__APP_VERSION__}</span>

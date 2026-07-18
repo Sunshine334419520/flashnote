@@ -7,6 +7,7 @@ import { cn } from '../lib/cn'
 import type { AIProviderConfig, AIProviderType } from '../../shared/types'
 import { CLOUD_STATUS } from '../../shared/types'
 import { BUILTIN_PROVIDER_PRESETS, CONFIG_KEYS } from '../../shared/constants'
+import { PROVIDER_META, ProviderIcon } from '../components/common/ProviderIcons'
 
 // ================================================================
 // Provider data
@@ -15,18 +16,15 @@ import { BUILTIN_PROVIDER_PRESETS, CONFIG_KEYS } from '../../shared/constants'
 interface ProviderOption {
   type: AIProviderType
   label: string
-  icon: string
-  bg: string
-  color: string
 }
 
 const PROVIDERS: ProviderOption[] = [
-  { type: 'deepseek', label: 'DeepSeek', icon: 'D', bg: 'bg-[#8B5CF6]/15', color: 'text-[#8B5CF6]' },
-  { type: 'moonshot', label: 'Moonshot', icon: 'M', bg: 'bg-foreground/10', color: 'text-foreground' },
-  { type: 'anthropic', label: 'Anthropic', icon: 'A', bg: 'bg-amber-500/15', color: 'text-amber-500' },
-  { type: 'openai', label: 'OpenAI', icon: 'O', bg: 'bg-emerald-500/15', color: 'text-emerald-500' },
-  { type: 'zhipu', label: 'Zhipu', icon: 'Z', bg: 'bg-blue-500/15', color: 'text-blue-500' },
-  { type: 'custom', label: '自定义', icon: '+', bg: 'bg-muted', color: 'text-muted-foreground' },
+  { type: 'deepseek', label: 'DeepSeek' },
+  { type: 'moonshot', label: 'Moonshot' },
+  { type: 'anthropic', label: 'Anthropic' },
+  { type: 'openai', label: 'OpenAI' },
+  { type: 'zhipu', label: 'Zhipu' },
+  { type: 'custom', label: '自定义' },
 ]
 
 const DEFAULT_MODELS: Record<string, string[]> = {
@@ -173,7 +171,7 @@ function AIConfigStep({ onDone }: { onDone: () => void }): ReactElement {
       <div className="space-y-1">
         <label className="text-label text-muted-foreground">服务商</label>
         <button onClick={() => setDropdownOpen(!dropdownOpen)} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-muted/50 border border-border hover:border-primary/20 transition-colors text-body">
-          <span className={cn('w-6 h-6 rounded-md flex items-center justify-center text-micro font-bold shrink-0', selected.bg, selected.color)}>{selected.icon}</span>
+          <ProviderIcon type={selected.type} size={22} />
           <span className="flex-1 text-left">{selected.label}</span>
           <ChevronDown size={14} className={cn('text-muted-foreground transition-transform', dropdownOpen && 'rotate-180')} />
         </button>
@@ -181,7 +179,7 @@ function AIConfigStep({ onDone }: { onDone: () => void }): ReactElement {
           <div className="border border-border rounded-xl overflow-hidden">
             {PROVIDERS.map((p) => (
               <button key={p.type} onClick={() => handleSelect(p)} className={cn('w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-muted/50 transition-colors text-body', p.type === selected.type && 'bg-primary/5')}>
-                <span className={cn('w-6 h-6 rounded-md flex items-center justify-center text-micro font-bold shrink-0', p.bg, p.color)}>{p.icon}</span>
+                <ProviderIcon type={p.type} size={20} />
                 {p.label}
               </button>
             ))}

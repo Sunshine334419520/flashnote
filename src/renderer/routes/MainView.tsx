@@ -14,6 +14,7 @@ import { StatusBarItem } from '../components/statusbar/StatusBarItem'
 import { StatusBarPanel } from '../components/statusbar/StatusBarPanel'
 import { AIOperationPanel } from '../components/statusbar/panels/AIOperationPanel'
 import { CloudSyncPanel } from '../components/statusbar/panels/CloudSyncPanel'
+import { ProviderIcon } from '../components/common/ProviderIcons'
 import { Settings, AlertCircle, RotateCw, Sparkles, Cloud, CloudAlert, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { useT } from '../i18n'
 import type { Note, AICommandRequest, AICommandResult, CloudConnection, SyncProgress } from '../../shared/types'
@@ -43,8 +44,15 @@ export function MainView(): ReactElement {
 
   // ── Status bar
   const failedCount = useStatusBarStore((s) => s.getFailedCount())
+  const tokenUsage = useStatusBarStore((s) => s.tokenUsage)
   const cloudConnection = useCloudSyncStore((s) => s.connection)
   const cloudSyncProgress = useCloudSyncStore((s) => s.syncProgress)
+  const [aiProviders, setAiProviders] = useState<import('../../shared/types').AIProviderConfig[]>([])
+  const activeProvider = aiProviders.find((p) => p.isActive)
+
+  useEffect(() => {
+    window.electronAPI.ai.providers.list().then(setAiProviders).catch(() => setAiProviders([]))
+  }, [])
 
   // Cloud icon based on status
   const cloudIcon = (() => {
@@ -336,9 +344,12 @@ export function MainView(): ReactElement {
         </StatusBarItem>
         <StatusBarItem
           id="ai"
-          icon={<Sparkles size={14} />}
+          icon={activeProvider
+            ? <ProviderIcon type={activeProvider.type} size={14} />
+            : <Sparkles size={14} className="text-muted-foreground/30" />
+          }
           label={t('statusbar.aiRecords')}
-          text={t('statusbar.ai')}
+          text={tokenUsage > 0 ? `${(tokenUsage / 1000).toFixed(1)}k` : undefined}
           badge={failedCount}
           dot
         >

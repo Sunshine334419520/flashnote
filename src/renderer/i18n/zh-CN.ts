@@ -154,6 +154,7 @@ const zhCN = {
   'statusbar.failed': 'AI · {n} 失败',
   'statusbar.aiRecords': 'AI 操作记录',
   'statusbar.noRecords': '暂无 AI 操作记录',
+  'statusbar.noAi': '前往设置配置 AI',
 
   // Cloud sync
   'statusbar.cloud': '云同步',

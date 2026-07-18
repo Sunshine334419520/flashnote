@@ -146,6 +146,7 @@ const en: Translations = {
   'statusbar.failed': 'AI · {n} failed',
   'statusbar.aiRecords': 'AI Operations',
   'statusbar.noRecords': 'No AI operations yet',
+  'statusbar.noAi': 'Configure AI in settings',
 
   // Cloud sync
   'statusbar.cloud': 'Cloud Sync',
