@@ -15,6 +15,7 @@ Usage:
   publish-git.py push <remote> <refspec>   → exit 0 if ok
   publish-git.py stash                     → exit 0 if ok
   publish-git.py stash-pop                 → exit 0 if ok
+  publish-git.py current-version           → {"version": str}
 
 Output convention:
   - Data commands → JSON on stdout
@@ -133,6 +134,19 @@ def cmd_stash_pop():
         sys.exit(1)
 
 
+def cmd_current_version():
+    """Read version from package.json."""
+    import os
+    pkg_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "package.json")
+    try:
+        with open(pkg_path) as f:
+            data = json.load(f)
+        print(json.dumps({"version": data.get("version")}))
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(json.dumps({"error": str(e)}))
+        sys.exit(1)
+
+
 COMMANDS = {
     "check-status": cmd_check_status,
     "last-tag": cmd_last_tag,
@@ -143,6 +157,7 @@ COMMANDS = {
     "push": cmd_push,
     "stash": cmd_stash,
     "stash-pop": cmd_stash_pop,
+    "current-version": cmd_current_version,
 }
 
 

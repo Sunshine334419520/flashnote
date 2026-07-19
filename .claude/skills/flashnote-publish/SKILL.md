@@ -60,9 +60,12 @@ Check the last tag and commits since then:
 ```bash
 python3 .claude/scripts/publish-git.py last-tag
 python3 .claude/scripts/publish-git.py commits-since <tag>
+python3 .claude/scripts/publish-git.py current-version
 ```
 
 If `last-tag` returns `{"tag": null}`, this is the first release — start from `v0.1.0`.
+
+The `current-version` check tells you what's currently in `package.json` — use it to decide between `pnpm version` (bump) and tag recreation (re-release).
 
 ### Stable channel
 
