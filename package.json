@@ -11,7 +11,7 @@
     "predev": "electron-rebuild -f -w better-sqlite3",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "package": "electron-builder",
+    "package": "electron-builder --publish=never",
     "typecheck": "tsc --noEmit -p tsconfig.main.json && tsc --noEmit -p tsconfig.renderer.json && tsc --noEmit -p tsconfig.preload.json",
     "lint": "eslint src/ --ext .ts,.tsx",
     "test": "vitest run",
