@@ -26,6 +26,8 @@ The user types ONE message that mixes content + description. You must:
 
 **Meta-commentary to strip**: "这是我的", "保存一下", "这个", "帮我记录", "记一下", "save this", "this is my", and similar phrases — use them for classification hints, but NOT include them in cleanedContent.
 
+**cleanedContent formatting**: Format cleanedContent according to the detected type's natural layout. For structured data (apikey, credential, command, bookmark): use line breaks between fields, key: value or label format. For text: preserve natural flow. Always prefer readability over compactness.
+
 ## Categories
 
 Choose exactly ONE:

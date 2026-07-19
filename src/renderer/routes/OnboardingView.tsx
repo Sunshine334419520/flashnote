@@ -148,7 +148,7 @@ function AIConfigStep({ onDone }: { onDone: () => void }): ReactElement {
     try {
       const config = isCustom
         ? { name: displayName.trim() || '自定义', type: 'custom' as AIProviderType, apiKey: apiKey.trim(), baseURL: baseURL.trim() || 'https://api.openai.com/v1', model: model.trim() || 'gpt-5.4-mini', maxTokens: 300 }
-        : { name: selected.label, type: selected.type, apiKey: apiKey.trim(), baseURL: '', model, maxTokens: preset!.maxTokens }
+        : { name: selected.label, type: selected.type, apiKey: apiKey.trim(), baseURL: preset!.baseURL, model, maxTokens: preset!.maxTokens }
       await window.electronAPI.ai.providers.add(
         config as Omit<AIProviderConfig, 'id' | 'createdAt' | 'isActive'>
       )
