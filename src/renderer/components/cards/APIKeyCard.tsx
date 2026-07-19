@@ -109,7 +109,7 @@ export function APIKeyCard({ note, onUpdate, onDelete }: Props): ReactElement {
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <code className={`flex-1 text-label font-mono text-muted-foreground bg-muted/30 rounded-lg px-2 py-1.5 select-all ${note.sensitive && !revealed ? 'truncate' : 'break-all whitespace-normal'}`}>
+          <code className={`flex-1 text-label font-mono text-muted-foreground bg-muted/30 rounded-lg px-2 py-1.5 select-all ${note.sensitive && !revealed ? 'truncate' : 'break-all whitespace-pre-line'}`}>
             {note.sensitive && !revealed ? masked : note.content}
           </code>
           <button

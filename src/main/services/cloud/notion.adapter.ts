@@ -363,7 +363,7 @@ export class NotionAdapter implements CloudSyncAdapter {
 
   async deleteNote(accessToken: string, pageId: string): Promise<void> {
     // Notion API: archive the page (soft delete)
-    const res = await this.loggedFetch('deleteNote', `${API}/blocks/${pageId}`, {
+    const res = await this.loggedFetch('deleteNote', `${API}/pages/${pageId}`, {
       method: 'PATCH',
       headers: { ...HEADERS, 'Authorization': `Bearer ${accessToken}` },
       body: JSON.stringify({ archived: true })

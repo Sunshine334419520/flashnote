@@ -79,7 +79,7 @@ export function CredentialCard({ note, onUpdate, onDelete }: Props): ReactElemen
         <div className="space-y-2">
           {username && <div className="flex items-center gap-2 text-caption"><span className="text-muted-foreground">User:</span><span className="font-medium">{username}</span></div>}
           <div className="flex items-center gap-2">
-            <code className={`flex-1 text-label font-mono text-muted-foreground bg-muted/30 rounded-lg px-2 py-1.5 ${revealed ? 'break-all whitespace-normal' : 'truncate'}`}>{revealed ? note.content : '●'.repeat(Math.min(note.content.length, 24))}</code>
+            <code className={`flex-1 text-label font-mono text-muted-foreground bg-muted/30 rounded-lg px-2 py-1.5 ${revealed ? 'break-all whitespace-pre-line' : 'truncate'}`}>{revealed ? note.content : '●'.repeat(Math.min(note.content.length, 24))}</code>
             <button onClick={() => setRevealed(!revealed)} className="shrink-0 p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title={revealed ? t('card.hide') : t('card.reveal')}>
               {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>

@@ -448,7 +448,7 @@ describe('NotionAdapter.deleteNote', () => {
     await adapter.deleteNote('token', 'page-1')
 
     const [url, opts] = mockFetch.mock.calls[0]
-    expect(url).toContain('/blocks/page-1')
+    expect(url).toContain('/pages/page-1')
     expect(opts.method).toBe('PATCH')
     expect(JSON.parse(opts.body as string)).toEqual({ archived: true })
   })
