@@ -208,6 +208,13 @@ const zhCN = {
   'onboarding.desc.cloud': '连接云端，开启跨设备无缝同步',
   'onboarding.desc.confirm': '确认你的设置，准备开始使用',
   'onboarding.advancing': '即将进入下一步',
+
+  // Onboarding AI test
+  'onboarding.verifying': '正在验证 AI 连接...',
+  'onboarding.verifySuccess': 'AI 连接验证成功',
+  'onboarding.verifyFail': 'AI 连接失败，请检查 API Key 和网络',
+  'onboarding.retry': '重试',
+  'onboarding.skipVerify': '跳过验证',
 }
 
 export default zhCN

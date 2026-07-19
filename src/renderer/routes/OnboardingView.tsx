@@ -113,10 +113,13 @@ function AIConfigStep({ onDone }: { onDone: () => void }): ReactElement {
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [testPhase, setTestPhase] = useState<'idle' | 'testing' | 'success' | 'fail'>('idle')
+  const [testError, setTestError] = useState<string | null>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const modelDropdownRef = useRef<HTMLDivElement>(null)
+  const { t } = useT()
 
   const preset = BUILTIN_PROVIDER_PRESETS.find((p) => p.type === selected.type)
   const modelOptions = selected.type !== 'custom' ? (DEFAULT_MODELS[selected.type] ?? []) : []
@@ -145,18 +148,37 @@ function AIConfigStep({ onDone }: { onDone: () => void }): ReactElement {
     if (!apiKey.trim() || (!isCustom && !model.trim())) return
     setSaving(true)
     setError(null)
+    setTestPhase('testing')
+    setTestError(null)
     try {
       const config = isCustom
         ? { name: displayName.trim() || '自定义', type: 'custom' as AIProviderType, apiKey: apiKey.trim(), baseURL: baseURL.trim() || 'https://api.openai.com/v1', model: model.trim() || 'gpt-5.4-mini', maxTokens: 300 }
         : { name: selected.label, type: selected.type, apiKey: apiKey.trim(), baseURL: preset!.baseURL, model, maxTokens: preset!.maxTokens }
-      await window.electronAPI.ai.providers.add(
+      const created = await window.electronAPI.ai.providers.add(
         config as Omit<AIProviderConfig, 'id' | 'createdAt' | 'isActive'>
       )
-      onDone()
+
+      // Auto-test the connection — delete provider on failure
+      try {
+        const ok = await window.electronAPI.ai.providers.test(created.id)
+        if (ok) {
+          setTestPhase('success')
+          setTimeout(() => onDone(), 800)
+        } else {
+          await window.electronAPI.ai.providers.delete(created.id)
+          setTestPhase('fail')
+          setTestError(t('onboarding.verifyFail'))
+        }
+      } catch (testErr) {
+        await window.electronAPI.ai.providers.delete(created.id)
+        setTestPhase('fail')
+        setTestError(t('onboarding.verifyFail') + ': ' + (testErr as Error).message)
+      }
     } catch (err) {
       setError((err as Error).message)
+      setTestPhase('idle')
     } finally { setSaving(false) }
-  }, [apiKey, selected, preset, model, baseURL, displayName, isCustom, onDone])
+  }, [apiKey, selected, preset, model, baseURL, displayName, isCustom, onDone, t])
 
   return (
     <div className="space-y-4">
@@ -251,15 +273,50 @@ function AIConfigStep({ onDone }: { onDone: () => void }): ReactElement {
 
       {error && <p className="text-caption text-red-500">{error}</p>}
 
-      <button onClick={handleSave} disabled={!apiKey.trim() || saving}
-        className={cn('w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-label font-medium transition-all', apiKey.trim() ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm' : 'bg-muted text-muted-foreground cursor-not-allowed', saving && 'opacity-70')}>
-        {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-        保存并继续
-      </button>
+      {/* ── Test feedback ──────────────────────────────────────────── */}
+      {testPhase === 'testing' && (
+        <div className="flex items-center justify-center gap-2 py-2 text-caption text-muted-foreground">
+          <Loader2 size={13} className="animate-spin" />
+          <span>{t('onboarding.verifying')}</span>
+        </div>
+      )}
+      {testPhase === 'success' && (
+        <div className="flex items-center justify-center gap-1.5 py-2 text-caption text-green-600 dark:text-green-400">
+          <Check size={13} />
+          <span>{t('onboarding.verifySuccess')}</span>
+        </div>
+      )}
+      {testPhase === 'fail' && (
+        <div className="space-y-2">
+          <p className="text-caption text-red-500 text-center">{testError}</p>
+          <div className="flex gap-2">
+            <button onClick={handleSave} disabled={saving}
+              className="flex-1 py-2 rounded-xl text-label font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all">
+              {t('onboarding.retry')}
+            </button>
+            <button onClick={onDone}
+              className="flex-1 py-2 rounded-xl text-label font-medium text-muted-foreground hover:bg-muted transition-colors">
+              {t('onboarding.skipVerify')}
+            </button>
+          </div>
+        </div>
+      )}
 
-      <button onClick={onDone} className="w-full py-2.5 rounded-xl text-label font-medium text-muted-foreground hover:bg-muted transition-colors">
-        跳过
-      </button>
+      {/* ── Save button (idle state only) ─────────────────────────── */}
+      {testPhase !== 'fail' && testPhase !== 'success' && (
+        <button onClick={handleSave} disabled={!apiKey.trim() || saving || testPhase === 'testing'}
+          className={cn('w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-label font-medium transition-all', apiKey.trim() && testPhase !== 'testing' ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm' : 'bg-muted text-muted-foreground cursor-not-allowed', (saving || testPhase === 'testing') && 'opacity-70')}>
+          {saving || testPhase === 'testing' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+          {testPhase === 'testing' ? t('onboarding.verifying') : '保存并继续'}
+        </button>
+      )}
+
+      {/* ── Skip button (hidden during testing/success) ───────────── */}
+      {testPhase !== 'testing' && testPhase !== 'success' && testPhase !== 'fail' && (
+        <button onClick={onDone} className="w-full py-2.5 rounded-xl text-label font-medium text-muted-foreground hover:bg-muted transition-colors">
+          跳过
+        </button>
+      )}
     </div>
   )
 }

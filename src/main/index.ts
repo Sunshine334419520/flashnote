@@ -256,12 +256,30 @@ const ICONS = {
 }
 
 function createTrayIcon(): Electron.NativeImage {
-  const img = nativeImage.createFromPath(ICONS.tray)
-  // macOS: template image auto-adapts to dark/light menu bar
-  if (IS_MAC) {
-    img.setTemplateImage(true)
+  const iconPath = ICONS.tray
+  logger.info(LOG_TAGS.MAIN.TRAY, `Loading tray icon: ${iconPath}`)
+
+  try {
+    const buf = readFileSync(iconPath)
+    const img = nativeImage.createFromBuffer(buf)
+
+    if (img.isEmpty()) {
+      logger.warn(LOG_TAGS.MAIN.TRAY, 'Tray icon is empty after load', { path: iconPath })
+    }
+
+    // macOS: template image auto-adapts to dark/light menu bar
+    if (IS_MAC) {
+      img.setTemplateImage(true)
+    }
+    return img
+  } catch (err) {
+    logger.error(LOG_TAGS.MAIN.TRAY, 'Failed to read tray icon file', {
+      path: iconPath,
+      error: (err as Error).message
+    })
+    // Return a fallback empty 16x16 image so tray still creates
+    return nativeImage.createEmpty()
   }
-  return img
 }
 
 function createTray(): void {
@@ -286,6 +304,14 @@ function createTray(): void {
 
   tray.setToolTip('FlashNote')
   tray.setContextMenu(trayMenu)
+
+  // macOS: click shows context menu (built-in behavior, no handler needed)
+  // Windows/Linux: left-click shows main window, right-click shows context menu
+  if (!IS_MAC) {
+    tray.on('click', () => {
+      showMainWindow()
+    })
+  }
 }
 
 // ============================================================

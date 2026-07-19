@@ -200,6 +200,13 @@ const en: Translations = {
   'onboarding.desc.cloud': 'Connect to cloud for seamless cross-device sync',
   'onboarding.desc.confirm': 'Review your setup and get started',
   'onboarding.advancing': 'Advancing to next step',
+
+  // Onboarding AI test
+  'onboarding.verifying': 'Verifying AI connection...',
+  'onboarding.verifySuccess': 'AI connection verified',
+  'onboarding.verifyFail': 'Connection failed, please check API Key and network',
+  'onboarding.retry': 'Retry',
+  'onboarding.skipVerify': 'Skip verification',
 }
 
 export default en

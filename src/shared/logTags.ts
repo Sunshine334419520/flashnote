@@ -10,6 +10,7 @@ export const LOG_TAGS = {
     MENU: 'main:menu',
     UNCAUGHT: 'main:uncaughtException',
     UNHANDLED: 'main:unhandledRejection',
+    TRAY: 'main:tray',
     IPC: 'ipc',
   },
   AI: {
