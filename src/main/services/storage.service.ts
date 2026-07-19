@@ -141,6 +141,12 @@ export function removeNote(noteId: string): void {
 
   // Delete from index
   deleteNoteById(noteId)
+
+  // Record tombstone so sync doesn't re-import this deleted note
+  try {
+    const { addTombstone } = require('../services/cloud/tombstone')
+    addTombstone(noteId)
+  } catch { /* ignore — tombstone is best-effort */ }
 }
 
 export function getNotes(query?: SearchQuery): SearchResult {

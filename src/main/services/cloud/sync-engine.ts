@@ -124,7 +124,18 @@ export class SyncEngine {
       const local = localMap.get(remote.flashnoteId)
 
       if (!local) {
-        // Remote note doesn't exist locally → import
+        // Remote note doesn't exist locally. Check tombstone — if the user
+        // deleted it locally and cloud delete hasn't gone through yet, skip.
+        let isTombstone = false
+        try {
+          const { getTombstones } = require('./tombstone')
+          isTombstone = getTombstones().includes(remote.flashnoteId)
+        } catch { /* ignore */ }
+        if (isTombstone) {
+          logger.info(LOG_TAGS.CLOUD.SYNC, `Tombstone skip: "${remote.title}"`, { noteId: remote.flashnoteId })
+          continue
+        }
+
         try {
           this.upsertLocalNote(SyncEngine.remoteToLocalNote(remote))
           result.pulled++
@@ -253,6 +264,11 @@ export class SyncEngine {
       if (remote) {
         await this.adapter.deleteNote(conn.accessToken, remote.pageId)
       }
+      // Cloud delete succeeded — clear the tombstone
+      try {
+        const { removeTombstone } = require('./tombstone')
+        removeTombstone(noteId)
+      } catch { /* ignore */ }
     } catch (err) {
       logger.error(LOG_TAGS.CLOUD.SYNC, `deleteRemoteNote failed for ${noteId}`, { error: String(err) })
     }
