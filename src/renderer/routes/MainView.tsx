@@ -22,6 +22,12 @@ import type { Note, AICommandRequest, AICommandResult, CloudConnection, SyncProg
 /** delete/edit results await a second-phase confirmation. */
 type PendingResult = Extract<AICommandResult, { kind: 'delete_candidates' } | { kind: 'edit_preview' }>
 
+function formatTokens(n: number): string {
+  if (n < 1000) return `${n} tokens`
+  if (n < 1_000_000) return `${(n / 1000).toFixed(1)}k tokens`
+  return `${(n / 1_000_000).toFixed(1)}M tokens`
+}
+
 export function MainView(): ReactElement {
   const fetchNotes = useNoteStore((s) => s.fetchNotes)
   const searchQuery = useNoteStore((s) => s.searchQuery)
@@ -57,15 +63,15 @@ export function MainView(): ReactElement {
   // Cloud icon based on status
   const cloudIcon = (() => {
     if (!cloudConnection || cloudConnection.status === CLOUD_STATUS.DISCONNECTED) {
-      return <Cloud size={14} className="text-muted-foreground/30" />
+      return <Cloud size={16} className="text-muted-foreground/30" />
     }
     if (cloudConnection.status === CLOUD_STATUS.CONNECTING || (cloudSyncProgress && cloudSyncProgress.phase !== SYNC_PHASES.IDLE)) {
-      return <RefreshCw size={14} className="text-blue-500 animate-spin" />
+      return <RefreshCw size={16} className="text-blue-500 animate-spin" />
     }
     if (cloudConnection.status === CLOUD_STATUS.ERROR) {
-      return <CloudAlert size={14} className="text-type-credential" />
+      return <CloudAlert size={16} className="text-type-credential" />
     }
-    return <CheckCircle2 size={14} className="text-green-500" />
+    return <CheckCircle2 size={16} className="text-green-500" />
   })()
 
   const cloudDot = cloudConnection?.status === CLOUD_STATUS.ERROR
@@ -132,8 +138,11 @@ export function MainView(): ReactElement {
     const startedAt = Date.now()
 
     try {
-      const result = await window.electronAPI.aiCommand.run(req)
+      const result = await window.electronAPI.aiCommand.run(req) as AICommandResult & { totalTokens?: number }
       if (controller.signal.aborted) return
+      if (result.totalTokens) {
+        useStatusBarStore.getState().addTokenUsage(result.totalTokens)
+      }
       if (result.kind === 'search') {
         setSearchResult({ query: result.query, notes: result.notes })
       } else if (result.kind === 'add') {
@@ -276,89 +285,92 @@ export function MainView(): ReactElement {
       )}
 
       <div className="h-screen flex flex-col bg-background">
-      {/* AI Command Bar — draggable region on macOS hiddenInset */}
-      <div className="shrink-0 px-24 pt-[46px] pb-[6px] drag-region">
-        <div className="no-drag flex items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="relative max-w-2xl mx-auto">
-              <CommandInput
-                mode="local"
-                value={searchQuery}
-                onChange={handleInputChange}
-                onCommit={runAICommand}
-                processing={!!processingCmd}
-                onAbort={handleAbort}
-              />
-              {error && (
-                <div className="absolute top-full left-0 right-0 z-40 mt-2 flex items-center gap-2 pl-[6px] text-caption text-type-credential">
-                  <AlertCircle size={12} className="shrink-0" />
-                  <span className="truncate">{error}</span>
-                  <button
-                    onClick={handleRetry}
-                    className="ml-1 shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
-                  >
-                    <RotateCw size={12} />
-                    {t('search.retry')}
-                  </button>
-                </div>
-              )}
-              {pending && (
-                <div className="absolute top-full left-0 right-0 z-40 mt-2">
-                  <CommandResultPanel
-                    result={pending}
-                    applying={applying}
-                    onConfirm={handleConfirm}
-                    onCancel={handleCancelPending}
-                  />
-                </div>
-              )}
+        {/* AI Command Bar — draggable region on macOS hiddenInset */}
+        <div className="shrink-0 px-24 pt-[46px] pb-[6px] drag-region">
+          <div className="no-drag flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="relative max-w-2xl mx-auto">
+                <CommandInput
+                  mode="local"
+                  value={searchQuery}
+                  onChange={handleInputChange}
+                  onCommit={runAICommand}
+                  processing={!!processingCmd}
+                  onAbort={handleAbort}
+                />
+                {error && (
+                  <div className="absolute top-full left-0 right-0 z-40 mt-2 flex items-center gap-2 pl-[6px] text-caption text-type-credential">
+                    <AlertCircle size={12} className="shrink-0" />
+                    <span className="truncate">{error}</span>
+                    <button
+                      onClick={handleRetry}
+                      className="ml-1 shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <RotateCw size={12} />
+                      {t('search.retry')}
+                    </button>
+                  </div>
+                )}
+                {pending && (
+                  <div className="absolute top-full left-0 right-0 z-40 mt-2">
+                    <CommandResultPanel
+                      result={pending}
+                      applying={applying}
+                      onConfirm={handleConfirm}
+                      onCancel={handleCancelPending}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
+            <button
+              onClick={() => window.electronAPI.window.showSettings()}
+              className="shrink-0 mt-1 p-2 rounded-xl text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
+              title="Settings"
+            >
+              <Settings size={16} />
+            </button>
           </div>
-          <button
-            onClick={() => window.electronAPI.window.showSettings()}
-            className="shrink-0 mt-1 p-2 rounded-xl text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50 transition-colors"
-            title="Settings"
-          >
-            <Settings size={16} />
-          </button>
         </div>
-      </div>
 
-      {/* Card canvas */}
-      <div className="flex-1 overflow-y-auto">
-        <CardWall onUpdate={handleCardUpdate} onDelete={handleCardDelete} />
-      </div>
+        {/* Card canvas */}
+        <div className="flex-1 overflow-y-auto">
+          <CardWall onUpdate={handleCardUpdate} onDelete={handleCardDelete} />
+        </div>
 
-      {/* Status bar */}
-      <StatusBar>
-        <StatusBarItem
-          id="cloud"
-          icon={cloudIcon}
-          label={t('statusbar.cloud')}
-          dot={cloudDot}
-          badgeColor={cloudDotColor}
-        >
-          <StatusBarPanel title={t('statusbar.cloud')}>
-            <CloudSyncPanel />
-          </StatusBarPanel>
-        </StatusBarItem>
-        <StatusBarItem
-          id="ai"
-          icon={activeProvider
-            ? <ProviderIcon type={activeProvider.type} size={14} />
-            : <Sparkles size={14} className="text-muted-foreground/30" />
-          }
-          label={t('statusbar.aiRecords')}
-          text={tokenUsage > 0 ? `${(tokenUsage / 1000).toFixed(1)}k` : undefined}
-          badge={failedCount}
-          dot
-        >
-          <StatusBarPanel title={t('statusbar.aiRecords')}>
-            <AIOperationPanel />
-          </StatusBarPanel>
-        </StatusBarItem>
-      </StatusBar>
-    </div>
+        {/* Status bar */}
+        <StatusBar>
+          <StatusBarItem
+            id="cloud"
+            icon={cloudIcon}
+            label={t('statusbar.cloud')}
+            dot={cloudDot}
+            badgeColor={cloudDotColor}
+            panelWidth="w-[380px]"
+          >
+            <StatusBarPanel title={t('statusbar.cloud')}>
+              <CloudSyncPanel />
+            </StatusBarPanel>
+          </StatusBarItem>
+          <StatusBarItem
+            id="ai"
+            icon={activeProvider
+              ? <ProviderIcon type={activeProvider.type} size={16} />
+              : <Sparkles size={16} className="text-muted-foreground/30" />
+            }
+            label={t('statusbar.aiRecords')}
+            text={tokenUsage > 0 ? formatTokens(tokenUsage) : undefined}
+            badge={failedCount}
+            dot
+            panelWidth="w-[380px]"
+            panelClass="-left-[36px]"
+          >
+            <StatusBarPanel title="FlashNote AI">
+              <AIOperationPanel />
+            </StatusBarPanel>
+          </StatusBarItem>
+        </StatusBar>
+      </div>
     </>
   )
 }

@@ -41,6 +41,9 @@ import type {
 export class AICommandService {
   constructor(private readonly ai: AIService) {}
 
+  /** Total tokens consumed since app started. */
+  get totalTokens(): number { return this.ai.totalTokens }
+
   async run(req: AICommandRequest, signal: AbortSignal): Promise<AICommandResult> {
     let type = req.type
     let raw = req.raw

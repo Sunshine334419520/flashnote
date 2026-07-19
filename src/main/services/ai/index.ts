@@ -18,6 +18,7 @@ export class AIService {
   private activeProviderId: string | null = null
   private cache: AICache
   private storagePath: string
+  totalTokens = 0
 
   constructor(storagePath: string) {
     this.storagePath = storagePath
@@ -167,6 +168,8 @@ export class AIService {
           maxTokens: req.maxTokens
         })
       }
+      const tokens = usage?.total_tokens ?? (usage?.prompt_tokens ?? 0) + (usage?.completion_tokens ?? 0)
+      if (tokens) { this.totalTokens += tokens; logger.info(LOG_TAGS.AI.COMPLETE, 'token count', { total: this.totalTokens }) }
       return res.content
     } catch (err) {
       logger.warn(LOG_TAGS.AI.COMPLETE, 'failed', {

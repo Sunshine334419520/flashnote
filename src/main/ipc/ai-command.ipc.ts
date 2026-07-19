@@ -28,10 +28,11 @@ export function registerAICommandIpc(commandService: AICommandService): void {
       const start = Date.now()
       try {
         const result = await commandService.run(req, controller.signal)
-        logger.info(LOG_TAGS.AI.COMMAND, 'done', { id: req.id, kind: result.kind, elapsedMs: Date.now() - start })
+        const tokens = commandService.totalTokens
+        logger.info(LOG_TAGS.AI.COMMAND, 'done', { id: req.id, kind: result.kind, tokens, elapsedMs: Date.now() - start })
         // Only /add mutates during run — surface it to all windows.
         if (result.kind === 'add') broadcast(IPC_CHANNELS.EVENT_NOTE_CREATED, result.note)
-        return result
+        return { ...result, totalTokens: tokens }
       } catch (err) {
         logger.warn(LOG_TAGS.AI.COMMAND, 'run failed', {
           id: req.id,
