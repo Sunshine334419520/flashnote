@@ -8,7 +8,10 @@ directories:
 
 files:
   - out/**/*
-  - assets/**/*
+
+extraResources:
+  - from: assets
+    to: assets
 
 mac:
   target:
