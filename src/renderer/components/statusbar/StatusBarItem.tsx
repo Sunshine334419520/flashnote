@@ -9,12 +9,13 @@ interface Props {
   text?: string
   badge?: number
   badgeColor?: string
-  /** Show a simple colored dot instead of a numbered badge. */
   dot?: boolean
+  panelWidth?: string
+  panelClass?: string
   children: ReactNode
 }
 
-export function StatusBarItem({ id, icon, label, text, badge, badgeColor = 'bg-type-credential', dot = false, children }: Props): ReactElement {
+export function StatusBarItem({ id, icon, label, text, badge, badgeColor = 'bg-type-credential', dot = false, panelWidth, panelClass, children }: Props): ReactElement {
   const activePanel = useStatusBarStore((s) => s.activePanel)
   const togglePanel = useStatusBarStore((s) => s.togglePanel)
   const closePanel = useStatusBarStore((s) => s.closePanel)
@@ -39,7 +40,7 @@ export function StatusBarItem({ id, icon, label, text, badge, badgeColor = 'bg-t
         onClick={() => togglePanel(id)}
         title={label}
         className={cn(
-          'relative flex items-center gap-1.5 px-2.5 h-8 text-micro transition-colors',
+          'relative flex items-center gap-1.5 px-2.5 h-10 text-micro transition-colors',
           isActive
             ? 'bg-muted/70 text-foreground'
             : 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30'
@@ -73,9 +74,9 @@ export function StatusBarItem({ id, icon, label, text, badge, badgeColor = 'bg-t
         )}
       </button>
 
-      {/* Floating panel — positioned above the icon, left-aligned */}
+      {/* Floating panel — positioned above the button, left-aligned */}
       {isActive && (
-        <div className="absolute bottom-full left-0 ml-2 mb-1 w-[300px] bg-card rounded-lg border border-border shadow-lg z-50 flex flex-col overflow-hidden" style={{ maxHeight: '280px' }}>
+        <div className={cn('absolute bottom-full left-0 mb-1 bg-card rounded-md border border-border shadow-lg z-50 flex flex-col overflow-hidden', panelWidth ?? 'w-[300px]', panelClass)} style={{ maxHeight: '360px' }}>
           {children}
         </div>
       )}
