@@ -72,9 +72,10 @@ export function QuickCapture(): ReactElement {
   useEffect(() => {
     const orig = document.body.style.backgroundColor
     document.body.style.backgroundColor = 'transparent'
+
     const timer = setTimeout(() => {
       inputRef.current?.focus()
-      window.electronAPI.window.setSize(680, INPUT_HEIGHT)
+      window.electronAPI.window.setSize(680, INPUT_HEIGHT + HINT_HEIGHT)
     }, 100)
     return () => {
       document.body.style.backgroundColor = orig
@@ -274,7 +275,7 @@ export function QuickCapture(): ReactElement {
   return (
     <div
       ref={cardRef}
-      className="bg-card rounded-xl border border-border/60 overflow-hidden"
+      className="bg-card rounded-xl overflow-hidden"
     >
       {/* ── Input bar ────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-4" style={{ height: INPUT_HEIGHT }}>

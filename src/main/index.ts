@@ -105,6 +105,7 @@ function createQuickCaptureWindow(): void {
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
+    roundedCorners: false,
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
