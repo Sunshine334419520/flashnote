@@ -1,4 +1,10 @@
 @import 'tailwindcss';
+
+/* Use class-based dark mode (driven by .dark on <html>) instead of the
+   default prefers-color-scheme media query, so the app's theme setting
+   (light / dark / system) controls all dark: variants consistently. */
+@variant dark (&:where(.dark, .dark *));
+
 @import './themes/light.css';
 @import './themes/dark.css';
 
