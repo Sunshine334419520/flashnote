@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   macos:
+    name: macOS (x64 + arm64)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,10 +26,13 @@ jobs:
           FLASHNOTE_NOTION_CLIENT_SECRET: ${{ secrets.FLASHNOTE_NOTION_CLIENT_SECRET }}
           FLASHNOTE_ONENOTE_CLIENT_ID: ${{ vars.FLASHNOTE_ONENOTE_CLIENT_ID }}
       - run: pnpm package
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: dist/*.dmg
 
   windows:
+    name: Windows (x64)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,10 +49,13 @@ jobs:
           FLASHNOTE_NOTION_CLIENT_SECRET: ${{ secrets.FLASHNOTE_NOTION_CLIENT_SECRET }}
           FLASHNOTE_ONENOTE_CLIENT_ID: ${{ vars.FLASHNOTE_ONENOTE_CLIENT_ID }}
       - run: pnpm package
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: dist/*.msi
 
   linux:
+    name: Linux (x64)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,5 +72,76 @@ jobs:
           FLASHNOTE_NOTION_CLIENT_SECRET: ${{ secrets.FLASHNOTE_NOTION_CLIENT_SECRET }}
           FLASHNOTE_ONENOTE_CLIENT_ID: ${{ vars.FLASHNOTE_ONENOTE_CLIENT_ID }}
       - run: pnpm package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: dist/*.AppImage
+
+  publish-release:
+    name: Publish Release
+    needs: [macos, windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release body
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          PREV=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -1)
+
+          {
+            echo "## FlashNote ${TAG}"
+            echo ""
+
+            if [ -z "$PREV" ]; then
+              echo "🎉 首次发布"
+            else
+              for data in "feat|🚀 新功能" "fix|🐛 修复" "refactor|🔧 重构" "style|🎨 样式" "chore|📦 项目维护" "docs|📝 文档"; do
+                PREFIX="${data%%|*}"
+                LABEL="${data#*|}"
+                COMMITS=$(git log "$PREV..HEAD" --oneline --no-merges | grep -E "^[0-9a-f]{7,} $PREFIX" || true)
+                if [ -n "$COMMITS" ]; then
+                  echo "### $LABEL"
+                  while IFS= read -r line; do
+                    msg=$(echo "$line" | sed "s/^[0-9a-f]* $PREFIX[:(]* //")
+                    echo "- $msg"
+                  done <<< "$COMMITS"
+                  echo ""
+                fi
+              done
+            fi
+
+            echo "---"
+            echo "完整变更: \`git log ${PREV:-开始}...${TAG}\`"
+          } > body.md
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-macos
+          path: release/macos
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-windows
+          path: release/windows
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-linux
+          path: release/linux
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          body_path: body.md
+          prerelease: ${{ contains(github.ref_name, '-beta') }}
+          files: |
+            release/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

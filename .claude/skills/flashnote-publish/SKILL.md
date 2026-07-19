@@ -1,5 +1,5 @@
 ---
-name: flashnote-push
+name: flashnote-publish
 description: Publish a new FlashNote release — version bump → push tag → GitHub Actions builds. Supports stable and beta channels.
 ---
 
