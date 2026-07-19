@@ -79,45 +79,28 @@ Beta tags (`v*-beta*`) are marked as **pre-release** on GitHub Release.
 
 ## Step 5 — Monitor CI build (background)
 
-After pushing the tag, start a background monitor to watch the workflow:
+After pushing the tag, use the dedicated Python CI monitor script:
 
 ### 5a. Find the workflow run
 
 ```bash
-curl -s "https://api.github.com/repos/Sunshine334419520/flashnote/actions/runs?event=push&per_page=1" \
-  | python3 -c "import json,sys; runs=json.load(sys.stdin)['workflow_runs']; print(runs[0]['id'] if runs else '')"
+python3 .claude/scripts/ci-find-run.py
 ```
+
+If it returns the latest run, note the `RUN_ID`. Otherwise, grab it from:
+`https://github.com/Sunshine334419520/flashnote/actions`
 
 ### 5b. Start background monitor
 
-Use the `Monitor` tool with this polling script (runs every 30s until all jobs complete):
+Use the `Monitor` tool with the CI watch script:
 
 ```bash
-RUN_ID="<from step 5a>"
-while true; do
-  DATA=$(curl -s "https://api.github.com/repos/Sunshine334419520/flashnote/actions/runs/$RUN_ID/jobs")
-  STATUS=$(echo "$DATA" | python3 -c "
-import json,sys
-jobs=json.load(sys.stdin)['jobs']
-for j in jobs:
-    print(f'{j[\"name\"]}: {j[\"status\"]} ({j.get(\"conclusion\",\"-\")})')
-")
-  echo "$STATUS"
-
-  # Check if all jobs have a conclusion
-  ALL_DONE=$(echo "$DATA" | python3 -c "
-import json,sys
-jobs=json.load(sys.stdin)['jobs']
-all_done = all(j.get('conclusion') is not None for j in jobs)
-print('yes' if all_done else 'no')
-")
-  [ "$ALL_DONE" = "yes" ] && break
-  sleep 30
-done
+python3 .claude/scripts/ci-watch.py <RUN_ID>
 ```
 
 Monitor settings:
 - `description`: "CI build for v<VERSION>"
+- `timeout_ms`: 600000 (10 min timeout)
 - `persistent`: false (stops when all jobs complete)
 
 ### 5c. When build completes
@@ -125,8 +108,7 @@ Monitor settings:
 Check the releases API for the published artifacts:
 
 ```bash
-curl -s "https://api.github.com/repos/Sunshine334419520/flashnote/releases/tags/v<VERSION>" \
-  | python3 -c "import json,sys; r=json.load(sys.stdin); print(r.get('html_url','Not found'))"
+python3 .claude/scripts/ci-check-release.py v<VERSION>
 ```
 
 Report to the user:
@@ -142,3 +124,6 @@ Report to the user:
 - Beta versions use a simple `-beta` suffix: `v0.2.0-beta`
 - Promote beta → stable: run `/flashnote-push` with `stable` channel, using the same version number without `-beta`
 - The status bar in the app auto-displays the version from `package.json`
+- `pnpm package` must use `--publish=never` (in `package.json` script) — publishing is handled by the `publish-release` workflow job via `softprops/action-gh-release`
+- CI monitoring scripts live in `.claude/scripts/`: `ci-watch.py`, `ci-find-run.py`, `ci-check-release.py`
+- **Permission setup**: `.claude/settings.json` has allow rules for `pnpm typecheck`, `pnpm test`, `npx tsc --noEmit`, `curl` to `api.github.com`, and `python3 .claude/scripts/*`. Run the `fewer-permission-prompts` skill if additional patterns need adding.
